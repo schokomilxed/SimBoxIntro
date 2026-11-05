@@ -15,12 +15,6 @@
     ?offset=8    Start um n Sekunden verzögern (z. B. damit die zweite Seite versetzt läuft)
     ?speed=1.5   schneller / langsamer abspielen
   Taste G schaltet das Raster um.
-
-  Rahmenausgleich: Der Inhalt liegt auf einer virtuellen Fläche, in der die Monitorrahmen mitgezählt
-  werden. Was hinter einem Rahmen liegt, wird nicht gezeigt – Schrift läuft „hinter dem Rahmen“ durch.
-  Taste K: Testbild zum Einmessen. Pfeiltasten ←/→ Rahmen senkrecht (zwischen den Spalten),
-  ↑/↓ Rahmen waagerecht (zwischen den Reihen), mit Shift in 10er-Schritten, 0 = Werte aus dem
-  Datenblatt. Eingemessene Werte merkt sich der Browser; zum festen Eintragen siehe FRAME im Skript.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,16 +100,6 @@
   #progress .seg.on span { color: var(--fg); }
   #progress .seg.done .fill { width: 100%; opacity: .35; }
 
-  /* Bildschirme mit Rahmenausgleich */
-  .tile { position: absolute; width: 1720px; height: 720px; overflow: hidden; }
-  .vstage { position: absolute; }
-  .calib { position: absolute; left: 0; top: 0; display: none; pointer-events: none; }
-  #stage.calibrate .calib { display: block; }
-  #stage.calibrate .scene { display: none; }
-  #calibinfo { position: absolute; left: 110px; top: 110px; z-index: 11; display: none; padding: 40px 48px; max-width: 1400px;
-    background: rgba(0, 0, 0, .78); color: #fff; font: 500 44px/1.35 var(--text); white-space: pre-line; }
-  #stage.calibrate #calibinfo { display: block; }
-
   /* Bildschirmraster (Debug) */
   #grid { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 10;
     background:
@@ -132,43 +116,13 @@
   <div id="scenes"></div>
   <div id="progress"></div>
   <div id="grid"></div>
-  <div id="calibinfo"></div>
 </div>
 
 <script>
 (() => {
   // ───────────────────────── Raster ─────────────────────────
-  // Zuspielung: 6880 × 1440 px = 4 × 2 Bildschirme à 1720 × 720 px
-  const PW = 6880, PH = 1440, TW = 1720, TH = 720, M = 110;
-
-  // ───────────────────────── Rahmenausgleich ─────────────────────────
-  // Monitor: LG UltraGear 34G600A-B – 34", 21:9, 3440 × 1440, gebogen (1800R), Rahmen an 3 Seiten schmal.
-  //   Pixelabstand 0,23175 mm → aktive Fläche 797,2 × 333,7 mm; Außenmaß ohne Fuß 809 × 358,9 mm.
-  //   Jeder Monitor bekommt 1720 × 720 px → 1 px der Bühne = 797,2 mm / 1720 = 0,4635 mm.
-  // Montage: obere Reihe um 180° gedreht. An der waagerechten Mittelfuge treffen also die beiden
-  //   schmalen Oberkanten aufeinander, die breite Unterkante (Logo) liegt jeweils außen.
-  // Rahmenbreiten sind aus dem Datenblatt abgeleitet (LG nennt sie nicht einzeln) – vor Ort mit Taste K
-  // einmessen und die Werte hier eintragen.
-  const MM_PER_PX = 797.2 / 1720;
-  const FRAME = {
-    sideMm: 9,   // seitlicher Rand: Gehäuse + schwarze Randzone des Panels
-    topMm: 9,    // schmale Oberkante (an der Mittelfuge, bei beiden Reihen)
-    gapXmm: 2,   // Luft zwischen zwei Monitoren nebeneinander
-    gapYmm: 2    // Luft zwischen oberer und unterer Reihe
-  };
-  const GX0 = Math.round((2 * FRAME.sideMm + FRAME.gapXmm) / MM_PER_PX);   // ≈ 43 px
-  const GY0 = Math.round((2 * FRAME.topMm + FRAME.gapYmm) / MM_PER_PX);    // ≈ 43 px
-  let GX = GX0, GY = GY0;
-  try {
-    const saved = JSON.parse(localStorage.getItem('simbox-frame') || 'null');
-    if (saved && Number.isFinite(saved.gx) && Number.isFinite(saved.gy)) { GX = saved.gx; GY = saved.gy; }
-  } catch (e) {}
-
-  // Virtuelle Bühne = Bildschirme + Rahmen. W/H/R1 sind virtuell, alle Layout-Koordinaten beziehen sich darauf.
-  let W, H, R1;
-  const col = c => c * (TW + GX);          // linke Kante von Bildschirmspalte c
-  function geo() { W = 4 * TW + 3 * GX; H = 2 * TH + GY; R1 = TH + GY; }   // R1 = Oberkante der unteren Reihe
-  geo();
+  const W = 6880, H = 1440, TW = 1720, TH = 720, M = 110;
+  const col = c => c * TW;
 
   // ───────────────────────── Inhalte ─────────────────────────
   const LEVELS = [
@@ -247,21 +201,18 @@
   const stage = document.getElementById('stage');
   if (LILA) stage.classList.add('lila');
   function fit() {
-    const k = Math.min(innerWidth / PW, innerHeight / PH);
-    stage.style.transform = `translate(${(innerWidth - PW * k) / 2}px, ${(innerHeight - PH * k) / 2}px) scale(${k})`;
+    const k = Math.min(innerWidth / W, innerHeight / H);
+    stage.style.transform = `translate(${(innerWidth - W * k) / 2}px, ${(innerHeight - H * k) / 2}px) scale(${k})`;
   }
   addEventListener('resize', fit); fit();
 
   // Raster
   const grid = document.getElementById('grid');
   for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
-    const i = document.createElement('i'); i.style.left = c * TW + 'px'; i.style.top = r * TH + 'px'; grid.appendChild(i);
+    const i = document.createElement('i'); i.style.left = col(c) + 'px'; i.style.top = r * TH + 'px'; grid.appendChild(i);
   }
   if (qs.get('grid')) grid.classList.add('on');
-  addEventListener('keydown', e => {
-    if (e.key.toLowerCase() === 'g') grid.classList.toggle('on');
-    else calibKey(e);
-  });
+  addEventListener('keydown', e => { if (e.key.toLowerCase() === 'g') grid.classList.toggle('on'); });
 
   // Fortschritt
   const progress = document.getElementById('progress');
@@ -325,7 +276,6 @@
     if (o.out) play(inner, chars, o.out, false, st, o.align);
     if (o.drift) {
       const [dx, from, to] = o.drift;
-      pos.dataset.dx = dx;
       drift.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }],
         { delay: s(from), duration: s(to - from), easing: 'linear', fill: 'both' });
     }
@@ -378,17 +328,15 @@
   }
 
   // ───────────────────────── Szenen ─────────────────────────
-  function intro(scene, first) {
-    if (first) {
-      setAccent('#f4f2ee', 50);
-      segs.forEach(sg => sg.classList.remove('on', 'done'));
-      segs.forEach(sg => sg.querySelector('.fill').getAnimations().forEach(a => a.cancel()));
-    }
+  function intro(scene) {
+    setAccent('#f4f2ee', 50);
+    segs.forEach(sg => sg.classList.remove('on', 'done'));
+    segs.forEach(sg => sg.querySelector('.fill').getAnimations().forEach(a => a.cancel()));
 
     // Beat 1 – Frage
     T(scene, { text: 'Wer fährt?', x: M, y: 0, w: W - 2 * M, h: TH, valign: 'center', size: 600, weight: 800, cls: 'display',
       in: ['letters', .2, 1], out: ['letters', 5.2, .7], drift: [-260, .2, 6], stagger: .045 });
-    T(scene, { text: "Who's driving?", x: M, y: R1, w: W - 2 * M, h: TH, align: 'right', valign: 'center', size: 600, weight: 800,
+    T(scene, { text: "Who's driving?", x: M, y: TH, w: W - 2 * M, h: TH, align: 'right', valign: 'center', size: 600, weight: 800,
       cls: 'display outline', style: { '--stroke': '5px' }, in: ['letters', .7, 1], out: ['letters', 5.3, .7], drift: [260, .7, 6], stagger: .045 });
 
     // Beat 2 – sechs Stufen
@@ -397,12 +345,15 @@
     T(scene, { text: 'SAE J3016', x: col(2) + M, y: M, size: 56, cls: 'kicker acc', in: ['rise', 6.8], out: ['rise', 12.4, .6] });
     T(scene, { text: 'Sechs Stufen', x: col(2) + M, y: 250, size: 330, weight: 700, cls: 'display', in: ['letters', 7, .9], out: ['letters', 12.4, .6] });
     T(scene, { text: 'des automatisierten Fahrens', x: col(2) + M, y: 560, size: 110, weight: 500, cls: 'display', in: ['rise', 7.5], out: ['rise', 12.5, .6] });
-    T(scene, { text: 'Six levels', x: col(2) + M, y: R1 + M, size: 330, weight: 700, cls: 'display outline', in: ['letters', 7.6, .9], out: ['letters', 12.5, .6] });
-    T(scene, { text: 'of driving automation', x: col(2) + M, y: R1 + 420, size: 110, weight: 500, cls: 'display dim', in: ['rise', 8.1], out: ['rise', 12.6, .6] });
+    T(scene, { text: 'Six levels', x: col(2) + M, y: TH + M, size: 330, weight: 700, cls: 'display outline', in: ['letters', 7.6, .9], out: ['letters', 12.5, .6] });
+    T(scene, { text: 'of driving automation', x: col(2) + M, y: TH + 420, size: 110, weight: 500, cls: 'display dim', in: ['rise', 8.1], out: ['rise', 12.6, .6] });
     return 13.6;
   }
 
-  function levelScene(scene, L, i, first) {
+  function levelScene(scene, L, i) {
+    setAccent(L.color, i % 2 ? 80 : 20);
+    segs.forEach((sg, k) => { sg.classList.toggle('on', k === L.n); sg.classList.toggle('done', k < L.n); });
+    const fill = segs[L.n].querySelector('.fill');
 
     const left = i % 2 === 0;              // Beat A: Ziffer links oder rechts
     const numA = left ? 0 : 3, numC = left ? 3 : 0;
@@ -414,11 +365,7 @@
 
     const A = 0, B = 6.4, C = 12.4, END = 22.6;
     const DUR = END + .9;
-    if (first) {
-      setAccent(L.color, i % 2 ? 80 : 20);
-      segs.forEach((sg, k) => { sg.classList.toggle('on', k === L.n); sg.classList.toggle('done', k < L.n); });
-      segs[L.n].querySelector('.fill').animate([{ width: '0%' }, { width: '100%' }], { duration: s(DUR), easing: 'linear', fill: 'both' });
-    }
+    fill.animate([{ width: '0%' }, { width: '100%' }], { duration: s(DUR), easing: 'linear', fill: 'both' });
 
     // ── Beat A: Ziffer + Titel ──
     T(scene, { text: String(L.n), x: col(numA), y: 0, w: TW, h: H, align: 'center', valign: 'center', size: 1720, weight: 800,
@@ -429,8 +376,8 @@
     T(scene, { text: L.de, x: left ? col(cA) + M : col(cA), y: 0, w: wA, h: TH - 80, align: alignA, valign: 'bottom',
       size: 380, weight: 700, cls: 'display', in: ['letters', A + .7, .9], out: ['letters', B - .9, .6], stagger: .028,
       drift: [left ? -120 : 120, A + .7, B] });
-    rule(scene, { x: left ? col(cA) + M : col(cA) + M, y: TH - 24, w: wA, inAt: A + .9, outAt: B - .8 });
-    T(scene, { text: L.en, x: left ? col(cA) + M : col(cA), y: R1 + 80, w: wA, h: TH - 80, align: alignA, valign: 'top',
+    rule(scene, { x: left ? col(cA) + M : col(cA) + M, y: TH - 3, w: wA, inAt: A + .9, outAt: B - .8 });
+    T(scene, { text: L.en, x: left ? col(cA) + M : col(cA), y: TH + 80, w: wA, h: TH - 80, align: alignA, valign: 'top',
       size: 380, weight: 700, cls: 'display outline', in: ['letters', A + 1.2, .9], out: ['letters', B - .8, .6], stagger: .028,
       drift: [left ? 120 : -120, A + 1.2, B] });
 
@@ -439,7 +386,7 @@
     T(scene, { text: keyEn, x: 0, y: 0, w: W, h: TH, align: 'center', valign: 'center', size: 640, weight: 800,
       cls: 'display', in: ['letters', B, 1], out: ['letters', C - .8, .6], stagger: .05, drift: [-700, B, C] });
     const rep = Array(6).fill(keyDe).join('  ·  ');
-    T(scene, { text: rep, x: -2400, y: R1 + 40, size: 560, weight: 800, cls: 'display outline acc', style: { '--stroke': '5px' },
+    T(scene, { text: rep, x: -2400, y: TH + 40, size: 560, weight: 800, cls: 'display outline acc', style: { '--stroke': '5px' },
       in: ['rise', B + .4, 1.1], out: ['drop', C - .7, .7], drift: [900, B + .4, C] });
 
     // ── Beat C: Bedeutung ──
@@ -451,8 +398,8 @@
     const c1 = col(cC);
     T(scene, { text: `${L.de}`, x: c1 + M, y: M, size: 44, cls: 'kicker acc', in: ['rise', C + .3], out: ['rise', END - .3, .5] });
     T(scene, { text: L.textDe, x: c1 + M, y: M + 90, w: TW - 2 * M, size: 84, cls: 'para', in: ['fade', C + .5, 1.1], out: ['fade', END - .2, .6] });
-    T(scene, { text: L.en, x: c1 + M, y: R1 + M, size: 44, cls: 'kicker dim', in: ['rise', C + .8], out: ['rise', END - .2, .5] });
-    T(scene, { text: L.textEn, x: c1 + M, y: R1 + M + 90, w: TW - 2 * M, size: 84, cls: 'para dim', in: ['fade', C + 1, 1.1], out: ['fade', END - .1, .6] });
+    T(scene, { text: L.en, x: c1 + M, y: TH + M, size: 44, cls: 'kicker dim', in: ['rise', C + .8], out: ['rise', END - .2, .5] });
+    T(scene, { text: L.textEn, x: c1 + M, y: TH + M + 90, w: TW - 2 * M, size: 84, cls: 'para dim', in: ['fade', C + 1, 1.1], out: ['fade', END - .1, .6] });
 
     // Spalte 2: Wer fährt? (oben) / Beispiel (unten)
     const c2 = col(cC + 1);
@@ -461,18 +408,18 @@
     T(scene, { text: L.driverEn, x: c2 + M, y: M + 270, size: 200, weight: 800, cls: 'display outline', in: ['letters', C + 1.9, .9], out: ['letters', END - .1, .6] });
     T(scene, { text: L.driverNote, x: c2 + M, y: TH - M - 44, size: 44, weight: 600, cls: 'kicker dim', in: ['fade', C + 2.4], out: ['fade', END, .5] });
 
-    T(scene, { text: 'Beispiel · Example', x: c2 + M, y: R1 + M, size: 44, cls: 'kicker acc', in: ['rise', C + 2.6], out: ['rise', END - .1, .5] });
+    T(scene, { text: 'Beispiel · Example', x: c2 + M, y: TH + M, size: 44, cls: 'kicker acc', in: ['rise', C + 2.6], out: ['rise', END - .1, .5] });
     const exDe = L.exDe.split(' · '), exEn = L.exEn.split(' · ');
-    T(scene, { html: exDe.map(t => `<div>${t}</div>`).join(''), x: c2 + M, y: R1 + M + 90, size: 92, weight: 700, cls: 'display',
+    T(scene, { html: exDe.map(t => `<div>${t}</div>`).join(''), x: c2 + M, y: TH + M + 90, size: 92, weight: 700, cls: 'display',
       style: { lineHeight: 1.02 }, in: ['fade', C + 2.8, 1], out: ['fade', END, .5] });
-    T(scene, { html: exEn.map(t => `<div>${t}</div>`).join(''), x: c2 + M, y: R1 + M + 110 + exDe.length * 94, size: 92, weight: 500, cls: 'display dim',
+    T(scene, { html: exEn.map(t => `<div>${t}</div>`).join(''), x: c2 + M, y: TH + M + 110 + exDe.length * 94, size: 92, weight: 500, cls: 'display dim',
       style: { lineHeight: 1.02 }, in: ['fade', C + 3.1, 1], out: ['fade', END, .5] });
 
     // Spalte 3: Füße / Hände / Augen / Kopf – je Bildschirm zwei Zeilen
     const c3 = col(cC + 2);
     BODY.forEach(([de, en], k) => {
       const busy = L.body[k];
-      const y = (k < 2 ? 0 : R1) + M - 10 + (k % 2) * 260;
+      const y = (k < 2 ? 0 : TH) + M - 10 + (k % 2) * 260;
       const t0 = C + 3.4 + k * .3;
       T(scene, { text: de, x: c3 + M, y, size: 220, weight: 800, cls: 'display' + (busy ? '' : ' outline'),
         style: busy ? {} : { '--stroke': '3px', opacity: .55 }, in: ['letters', t0, .8], out: ['letters', END - .3 + k * .05, .6], stagger: .04 });
@@ -491,39 +438,7 @@
   }
 
   // ───────────────────────── Ablauf ─────────────────────────
-  // Jeder Bildschirm zeigt seinen Ausschnitt der virtuellen Bühne; die Streifen hinter den Rahmen
-  // fallen dabei weg. Die Szene wird je Bildschirm einmal gebaut – alle Animationen entstehen im selben
-  // Moment und laufen dadurch synchron.
   const host = document.getElementById('scenes');
-  const tiles = [];
-  for (let r = 0; r < 2; r++) for (let c = 0; c < 4; c++) {
-    const t = document.createElement('div'); t.className = 'tile';
-    t.style.left = c * TW + 'px'; t.style.top = r * TH + 'px';
-    const v = document.createElement('div'); v.className = 'vstage';
-    t.appendChild(v); host.appendChild(t);
-    tiles.push({ c, r, v });
-  }
-  function placeTiles() {
-    tiles.forEach(t => Object.assign(t.v.style, { width: W + 'px', height: H + 'px', left: -col(t.c) + 'px', top: -t.r * R1 + 'px' }));
-    drawCalib();
-  }
-
-  // Elemente, die einen Bildschirm nie berühren, gleich wieder entfernen (spart Rechenleistung)
-  function cull(t) {
-    const vr = t.v.getBoundingClientRect();
-    if (!vr.width) return;
-    const k = vr.width / W, x0 = col(t.c), y0 = t.r * R1;
-    const dead = [];
-    t.v.querySelectorAll('.scene > .pos').forEach(p => {
-      const r = p.getBoundingClientRect();
-      const m = Math.abs(+p.dataset.dx || 0) + 600;     // Drift + Ein-/Ausflug der Animationen
-      const L = (r.left - vr.left) / k, T = (r.top - vr.top) / k;
-      const R = L + r.width / k, B = T + r.height / k;
-      if (R < x0 - m || L > x0 + TW + m || B < y0 - 300 || T > y0 + TH + 300) dead.push(p);
-    });
-    dead.forEach(p => p.remove());
-  }
-
   const SEQ = [{ kind: 'intro' }, ...LEVELS.map((L, i) => ({ kind: 'level', L, i }))];
   let idx = 0;
   if (startParam != null) {
@@ -531,68 +446,14 @@
     if (f >= 0) idx = f;
   }
 
-  let timer = 0, cur = idx;
-  function show(q) {
-    clearTimeout(timer);
-    let dur = 10;
-    tiles.forEach((t, k) => {
-      t.v.querySelectorAll('.scene').forEach(o => o.remove());
-      const scene = document.createElement('div'); scene.className = 'scene'; t.v.appendChild(scene);
-      dur = q.kind === 'intro' ? intro(scene, k === 0) : levelScene(scene, q.L, q.i, k === 0);
-    });
-    tiles.forEach(cull);
-    timer = setTimeout(next, s(dur));
-  }
   function next() {
-    cur = idx;
+    host.querySelectorAll('.scene').forEach(o => o.remove());
+    const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
+    const q = SEQ[idx];
+    const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
     idx = (idx + 1) % SEQ.length;
-    show(SEQ[cur]);
+    setTimeout(next, s(dur));
   }
-
-  // ───────────────────────── Einmessen (Taste K) ─────────────────────────
-  const info = document.getElementById('calibinfo');
-  function drawCalib() {
-    const lines = [];
-    for (let x = -H; x < W; x += 420) lines.push(`<line x1="${x}" y1="0" x2="${x + H}" y2="${H}"/>`);
-    for (let x = 0; x < W + H; x += 840) lines.push(`<line x1="${x}" y1="0" x2="${x - H}" y2="${H}"/>`);
-    const svg = `<svg class="calib" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
-      <g fill="none" stroke="#fff" stroke-width="5">${lines.join('')}</g>
-      <g fill="none" stroke="#ff2bd6" stroke-width="10">
-        <circle cx="${col(2) - GX / 2}" cy="${R1 - GY / 2}" r="${H * .44}"/>
-        <circle cx="${col(1) - GX / 2}" cy="${R1 - GY / 2}" r="${H * .3}"/>
-        <circle cx="${col(3) - GX / 2}" cy="${R1 - GY / 2}" r="${H * .3}"/>
-      </g></svg>`;
-    tiles.forEach(t => { t.v.querySelectorAll('.calib').forEach(o => o.remove()); t.v.insertAdjacentHTML('beforeend', svg); });
-    info.textContent =
-      `Rahmenausgleich einmessen\n` +
-      `Die Linien und Kreise müssen hinter den Rahmen gerade weiterlaufen.\n\n` +
-      `←/→  zwischen den Spalten: ${GX} px  (${(GX * MM_PER_PX).toFixed(1)} mm)\n` +
-      `↑/↓  zwischen den Reihen: ${GY} px  (${(GY * MM_PER_PX).toFixed(1)} mm)\n` +
-      `Shift = 10er-Schritte · 0 = Datenblatt (${GX0} / ${GY0} px) · K = fertig`;
-  }
-  function calibKey(e) {
-    const on = stage.classList.contains('calibrate');
-    if (e.key.toLowerCase() === 'k') {
-      stage.classList.toggle('calibrate');
-      if (on) show(SEQ[cur]);           // Szene mit den neuen Werten neu aufbauen
-      return;
-    }
-    if (!on) return;
-    const st = e.shiftKey ? 10 : 1;
-    if (e.key === 'ArrowRight') GX += st;
-    else if (e.key === 'ArrowLeft') GX = Math.max(0, GX - st);
-    else if (e.key === 'ArrowDown') GY += st;
-    else if (e.key === 'ArrowUp') GY = Math.max(0, GY - st);
-    else if (e.key === '0') { GX = GX0; GY = GY0; }
-    else return;
-    e.preventDefault();
-    try {
-      if (GX === GX0 && GY === GY0) localStorage.removeItem('simbox-frame');
-      else localStorage.setItem('simbox-frame', JSON.stringify({ gx: GX, gy: GY }));
-    } catch (err) {}
-    geo(); placeTiles();
-  }
-  placeTiles();
 
   const go = () => setTimeout(next, s(OFFSET) * SPEED);
   (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go, go);
