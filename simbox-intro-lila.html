@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sim.Box Idle Levels</title>
+<title>Sim.Box Idle Lila</title>
 <!--
-  Sim.Box – Idle-Modus: die sechs Stufen des automatisierten Fahrens (SAE J3016), DE/EN.
+  Sim.Box – Idle-Modus (Variante Lila, wabernder Verlauf): die sechs Stufen des automatisierten Fahrens (SAE J3016), DE/EN.
   Bühne: 6880 × 1440 px = 4 × 2 Bildschirme à 1720 × 720 px.
   Fließtext bleibt immer innerhalb eines Bildschirms, nur große Display-Typo läuft über die Stöße.
 
@@ -14,7 +14,6 @@
     ?level=3     mit Level 3 starten (intro = Einstieg)
     ?offset=8    Start um n Sekunden verzögern (z. B. damit die zweite Seite versetzt läuft)
     ?speed=1.5   schneller / langsamer abspielen
-    ?theme=lila  Variante auf dem wabernden Lila-Verlauf der Ausstellung (Standard: schwarz)
   Taste G schaltet das Raster um.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -111,7 +110,7 @@
 </style>
 </head>
 <body>
-<div id="stage">
+<div id="stage" class="lila">
   <div id="wave"><b class="b1"></b><b class="b3"></b><b class="b2"></b><b class="b4"></b><b class="light"></b></div>
   <div id="glow"></div>
   <div id="scenes"></div>
@@ -195,7 +194,7 @@
   const SPEED = Math.max(.1, parseFloat(qs.get('speed')) || 1);
   const OFFSET = Math.max(0, parseFloat(qs.get('offset')) || 0);
   const startParam = qs.get('level');
-  const LILA = /^(lila|gradient|purple)$/i.test(qs.get('theme') || '');
+  const LILA = true;
   const s = t => t * 1000 / SPEED;     // Sekunden → ms
 
   // ───────────────────────── Bühne skalieren ─────────────────────────
