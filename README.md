@@ -30,6 +30,29 @@ Zwei eigenständige Dateien, jede für sich vollständig:
   weiße Schrift, Akzente in Dunkelviolett. Ein weißer Lichtfleck wandert pro Level die Wand entlang.
   Die Farben stehen im CSS unter `#stage.lila` und `#wave`.
 
+## Rahmenausgleich
+
+Die Inhalte liegen auf einer virtuellen Fläche, in der die Monitorrahmen mitgezählt werden. Was hinter
+einem Rahmen liegt, wird nicht gezeigt: Schrift und Linien laufen „hinter dem Rahmen“ durch, statt am
+Stoß zu springen. Auf einem normalen Bildschirm ohne Rahmen sieht man deshalb an den Stößen einen
+kleinen Versatz – das ist gewollt.
+
+Monitore: LG UltraGear 34G600A-B (34", 21:9, 3440 × 1440, gebogen). Pixelabstand 0,23175 mm →
+aktive Fläche 797,2 × 333,7 mm, Außenmaß ohne Fuß 809 × 358,9 mm. Jeder Monitor bekommt
+1720 × 720 px, 1 px der Bühne entspricht also 0,4635 mm. Die obere Reihe ist um 180° gedreht
+montiert, an der Mittelfuge treffen die beiden schmalen Oberkanten aufeinander.
+
+LG nennt die einzelnen Rahmenbreiten nicht. Voreingestellt sind je 9 mm Rand (seitlich und oben) plus
+2 mm Luft zwischen den Monitoren, also 20 mm ≈ 43 px je Stoß, waagerecht und senkrecht.
+
+**Vor Ort einmessen:** Taste **K** zeigt ein Testbild aus schrägen Linien und Kreisen.
+- ←/→ ändert den Ausgleich zwischen den Spalten, ↑/↓ zwischen den Reihen (mit Shift in 10er-Schritten).
+- Richtig ist es, wenn die Linien und Kreise hinter den Rahmen gerade weiterlaufen.
+- 0 setzt auf die Datenblattwerte zurück, K beendet das Einmessen.
+
+Der Browser merkt sich die Werte. Damit sie fest in der Datei stehen, die angezeigten mm-Werte im
+Skript unter `FRAME` eintragen (`sideMm`/`gapXmm` für die Spalten, `topMm`/`gapYmm` für die Reihen).
+
 ## Schrift
 
 Barlow Condensed / Barlow kommen von Google Fonts. Ohne Internet greift eine Systemschrift –
