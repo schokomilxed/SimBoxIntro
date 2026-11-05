@@ -14,6 +14,7 @@
     ?level=3     mit Level 3 starten (intro = Einstieg)
     ?offset=8    Start um n Sekunden verzögern (z. B. damit die zweite Seite versetzt läuft)
     ?speed=1.5   schneller / langsamer abspielen
+    ?theme=lila  Variante auf dem wabernden Lila-Verlauf der Ausstellung (Standard: schwarz)
   Taste G schaltet das Raster um.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,6 +64,32 @@
   .kicker { font-family: var(--text); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
   .para { white-space: normal; font-family: var(--text); font-weight: 500; line-height: 1.22; letter-spacing: -.005em; }
 
+  /* ── Variante „lila“: wabernder Verlauf ── */
+  #wave { position: absolute; inset: 0; display: none; overflow: hidden; }
+  #stage.lila { --bg: #8d63ea; --fg: #ffffff; --dim: rgba(255, 255, 255, .74); --line: rgba(255, 255, 255, .3); --accent: #2e0f66; }
+  #stage.lila #wave { display: block; background: linear-gradient(100deg, #7f57e6 0%, #9d74f0 35%, #8a62ea 60%, #a27cf2 100%); }
+  #stage.lila #glow { display: none; }
+  #stage.lila .inner { text-shadow: 0 0 60px rgba(60, 20, 140, .18); }
+  #stage.lila .outline { text-shadow: none; }
+  #stage.lila .outline.acc { -webkit-text-stroke-width: calc(var(--stroke, 4px) * 1.7); }
+  #wave b { position: absolute; border-radius: 50%; will-change: transform; }
+  #wave .b1 { width: 3600px; height: 2600px; left: -900px; top: -900px;
+    background: radial-gradient(closest-side, rgba(196, 160, 250, .9), rgba(196, 160, 250, 0)); animation: w1 34s ease-in-out infinite alternate; }
+  #wave .b2 { width: 3800px; height: 2800px; left: 3600px; top: -600px;
+    background: radial-gradient(closest-side, rgba(108, 82, 236, .85), rgba(108, 82, 236, 0)); animation: w2 41s ease-in-out infinite alternate; }
+  #wave .b3 { width: 3000px; height: 2400px; left: 1600px; top: 200px;
+    background: radial-gradient(closest-side, rgba(222, 170, 245, .7), rgba(222, 170, 245, 0)); animation: w3 29s ease-in-out infinite alternate; }
+  #wave .b4 { width: 3400px; height: 2600px; left: 4600px; top: 300px;
+    background: radial-gradient(closest-side, rgba(160, 130, 248, .8), rgba(160, 130, 248, 0)); animation: w1 37s ease-in-out -12s infinite alternate-reverse; }
+  /* weißer Lichtfleck, wandert pro Level an eine andere Stelle */
+  #wave .light { width: 1700px; height: 1500px; top: -30px; left: calc(var(--gx, 50%) - 850px);
+    background: radial-gradient(closest-side, rgba(255, 255, 255, .5), rgba(255, 255, 255, .14) 45%, rgba(255, 255, 255, 0));
+    transition: left 6s cubic-bezier(.45, 0, .2, 1); animation: wl 13s ease-in-out infinite alternate; }
+  @keyframes w1 { to { transform: translate(1400px, 380px) scale(1.18); } }
+  @keyframes w2 { to { transform: translate(-1700px, 260px) scale(.85); } }
+  @keyframes w3 { 50% { transform: translate(1200px, -300px) scale(1.2); } to { transform: translate(-900px, -120px) scale(.9); } }
+  @keyframes wl { to { transform: translate(160px, 60px) scale(1.12); } }
+
   /* Fortschritt unten */
   #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: flex; pointer-events: none; }
   #progress .seg { position: relative; flex: 1; border-top: 3px solid var(--line); }
@@ -85,6 +112,7 @@
 </head>
 <body>
 <div id="stage">
+  <div id="wave"><b class="b1"></b><b class="b3"></b><b class="b2"></b><b class="b4"></b><b class="light"></b></div>
   <div id="glow"></div>
   <div id="scenes"></div>
   <div id="progress"></div>
@@ -167,10 +195,12 @@
   const SPEED = Math.max(.1, parseFloat(qs.get('speed')) || 1);
   const OFFSET = Math.max(0, parseFloat(qs.get('offset')) || 0);
   const startParam = qs.get('level');
+  const LILA = /^(lila|gradient|purple)$/i.test(qs.get('theme') || '');
   const s = t => t * 1000 / SPEED;     // Sekunden → ms
 
   // ───────────────────────── Bühne skalieren ─────────────────────────
   const stage = document.getElementById('stage');
+  if (LILA) stage.classList.add('lila');
   function fit() {
     const k = Math.min(innerWidth / W, innerHeight / H);
     stage.style.transform = `translate(${(innerWidth - W * k) / 2}px, ${(innerHeight - H * k) / 2}px) scale(${k})`;
@@ -404,7 +434,7 @@
   }
 
   function setAccent(c, gx) {
-    stage.style.setProperty('--accent', c);
+    if (!LILA) stage.style.setProperty('--accent', c);   // lila: feste Akzentfarbe aus dem CSS
     stage.style.setProperty('--gx', gx + '%');
   }
 

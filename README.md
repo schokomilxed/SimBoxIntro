@@ -20,6 +20,14 @@ Bühne mit. Es braucht keinen Server und keine weiteren Dateien.
 | `?level=3`   | mit diesem Level starten                                       |
 | `?offset=8`  | Start um n Sekunden verzögern, z. B. für die zweite Seite      |
 | `?speed=1.5` | schneller / langsamer abspielen                                |
+| `?theme=lila`| Variante auf dem wabernden Lila-Verlauf der Ausstellung        |
+
+## Varianten
+
+- **Schwarz** (Standard): dunkler Grund, jedes Level mit eigener Akzentfarbe von warm (Mensch) bis kühl (System).
+- **Lila** (`index.html?theme=lila`): der dynamisch wabernde Verlauf der übrigen Medienflächen als Hintergrund,
+  weiße Schrift, Akzente in Dunkelviolett. Ein weißer Lichtfleck wandert pro Level die Wand entlang.
+  Die Farben stehen im CSS unter `#stage.lila` und `#wave`.
 
 ## Schrift
 
