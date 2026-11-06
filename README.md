@@ -26,6 +26,11 @@ Bühne mit. Es braucht keinen Server und keine weiteren Dateien.
 Zwei eigenständige Dateien, jede für sich vollständig:
 
 - **Schwarz** – `simbox-intro-schwarz.html`: dunkler Grund, jedes Level mit eigener Akzentfarbe von warm (Mensch) bis kühl (System).
+- **Schwarz in DIN Pro** – `simbox-intro-schwarz-din.html`: wie Schwarz, aber in DIN Pro. Die Schrift ist
+  lizenzpflichtig und nicht im Repo: Die Seite nimmt die auf dem Abspielrechner installierte DIN Pro oder
+  die Dateien aus einem Ordner `fonts/` neben der HTML-Datei (`DINPro-Light`, `-Regular`, `-Medium`,
+  `-Bold`, `-Black` als .woff2/.woff/.otf/.ttf). Fehlt beides, erscheint ersatzweise Barlow.
+  Zeilen, die in DIN Pro zu breit werden, setzt die Seite automatisch kleiner.
 - **Lila** – `simbox-intro-lila.html`: der dynamisch wabernde Verlauf der übrigen Medienflächen als Hintergrund,
   weiße Schrift, Akzente in Dunkelviolett. Ein weißer Lichtfleck wandert pro Level die Wand entlang.
   Die Farben stehen im CSS unter `#stage.lila` und `#wave`.
