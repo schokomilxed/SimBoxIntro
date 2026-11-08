@@ -57,7 +57,7 @@
   /* Text-Element: pos > drift > mask > inner */
   .pos { position: absolute; white-space: nowrap; }
   .pos.box { display: flex; }
-  .mask { display: block; overflow: hidden; padding: .24em .02em .14em; margin: -.24em -.02em -.14em; }  /* oben Luft für Umlautpunkte */
+  .mask { display: block; overflow: hidden; padding: .5em .02em .22em; margin: -.5em -.02em -.22em; }  /* oben Luft für Umlautpunkte */
   .mask.free { overflow: visible; }
   .inner { display: block; }   /* bewusst kein will-change: dauerhafte Grafikebenen füllen den Grafikspeicher */
   .inner .ch { display: inline-block; }
@@ -321,6 +321,8 @@
       anim(drift, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }], s(from),
         { duration: s(to - from), easing: 'linear' }, false);
     }
+    // Die Luft der Maske (für Umlautpunkte) ist in em angegeben und muss sich auf die Schriftgröße beziehen
+    mask.style.fontSize = getComputedStyle(inner).fontSize;
     return inner;
   }
 
@@ -331,16 +333,16 @@
     const shown = { transform: 'none', opacity: 1 };
     switch (type) {
       case 'letters':
-        chars.forEach((c, i) => go(c, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                                             : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], at + i * st));
+        chars.forEach((c, i) => go(c, isIn ? [{ transform: 'translateY(180%)' }, { transform: 'translateY(0)' }]
+                                             : [{ transform: 'translateY(0)' }, { transform: 'translateY(-180%)' }], at + i * st));
         break;
       case 'rise':
-        go(inner, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }]);
+        go(inner, isIn ? [{ transform: 'translateY(180%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(-180%)' }]);
         break;
       case 'drop':
-        go(inner, isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
-                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }]);
+        go(inner, isIn ? [{ transform: 'translateY(-180%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(180%)' }]);
         break;
       case 'wipe': {
         const hid = align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
