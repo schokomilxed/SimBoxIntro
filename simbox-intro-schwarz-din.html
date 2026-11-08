@@ -14,7 +14,15 @@
     ?level=3     mit Level 3 starten (intro = Einstieg)
     ?offset=8    Start um n Sekunden verzögern (z. B. damit die zweite Seite versetzt läuft)
     ?speed=1.5   schneller / langsamer abspielen
-  Taste G schaltet das Raster um.
+  Tasten (H blendet die Übersicht ein):
+    H            Tastenübersicht ein/aus
+    G            Bildschirmraster und Sicherheitsrand ein/aus
+    Q / A        Sicherheitsrand größer/kleiner (Abstand der Texte zum Bildschirmrand), mit Shift in 50er-Schritten
+    0            Sicherheitsrand zurück auf 110 px
+    ← / →        vorige / nächste Szene
+    Leertaste    Pause / weiter
+    F            Vollbild ein/aus
+  Der eingestellte Sicherheitsrand wird im Browser gespeichert.
 
   Schrift: DIN Pro (lizenzpflichtig, nicht enthalten). Die Seite nimmt die auf dem Rechner installierte
   DIN Pro oder – falls nicht installiert – die Dateien aus einem Ordner „fonts“ neben dieser Datei
@@ -100,11 +108,11 @@
   .para { white-space: normal; font-family: var(--text); font-weight: 500; line-height: 1.22; letter-spacing: -.005em; }
 
   /* Fortschritt unten */
-  #progress { position: absolute; left: 0; right: 0; bottom: 0; height: 56px; display: flex; pointer-events: none; }
+  #progress { position: absolute; left: 0; right: 0; bottom: max(0px, calc(var(--m, 110px) - 110px)); height: 56px; display: flex; pointer-events: none; }
   #progress .seg { position: relative; flex: 1; border-top: 3px solid var(--line); }
   #progress .seg .fill { position: absolute; left: 0; top: -3px; height: 3px; width: 0; background: var(--accent); }
   #progress .seg span {
-    position: absolute; left: 110px; top: 14px; font: 600 26px/1 var(--text);
+    position: absolute; left: var(--m, 110px); top: 14px; font: 600 26px/1 var(--text);
     letter-spacing: .14em; text-transform: uppercase; color: var(--dim); transition: color .6s;
   }
   #progress .seg.on span { color: var(--fg); }
@@ -116,7 +124,21 @@
       linear-gradient(90deg, transparent 1716px, #f0f 1716px, #f0f 1724px, transparent 1724px) 0 0 / 1720px 100%,
       linear-gradient(transparent 716px, #f0f 716px, #f0f 724px, transparent 724px) 0 0 / 100% 1440px; }
   #grid.on { display: block; }
-  #grid i { position: absolute; width: 1720px; height: 720px; outline: 1px dashed rgba(255,0,255,.5); outline-offset: -110px; }
+
+  /* Tastenübersicht */
+  #help { position: absolute; left: 40px; top: 40px; width: 1640px; box-sizing: border-box; z-index: 20; display: none;
+    padding: 36px 48px; background: rgba(0, 0, 0, .86); color: #fff; border: 2px solid rgba(255, 255, 255, .25);
+    font: 500 32px/1.36 "Barlow", "Helvetica Neue", Arial, sans-serif; letter-spacing: 0; text-transform: none; }
+  #help.on { display: block; }
+  #help h2 { margin: 0 0 12px; font-size: 42px; font-weight: 700; }
+  #help table { border-collapse: collapse; }
+  #help td { padding: 2px 40px 2px 0; vertical-align: top; }
+  #help td:first-child { font-weight: 700; white-space: nowrap; }
+  #help .state { margin-top: 14px; color: #ffd23f; }
+  #toast { position: absolute; left: 860px; top: 1080px; transform: translate(-50%, -50%); z-index: 21; padding: 20px 40px;
+    background: rgba(0, 0, 0, .86); color: #fff; font: 600 40px/1.2 "Barlow", Arial, sans-serif; opacity: 0; transition: opacity .4s; }
+  #toast.on { opacity: 1; }
+  #grid i { position: absolute; width: 1720px; height: 720px; outline: 2px dashed rgba(255,0,255,.7); outline-offset: calc(var(--m, 110px) * -1); }
 </style>
 </head>
 <body>
@@ -125,12 +147,20 @@
   <div id="scenes"></div>
   <div id="progress"></div>
   <div id="grid"></div>
+  <div id="help"></div>
+  <div id="toast"></div>
 </div>
 
 <script>
 (() => {
   // ───────────────────────── Raster ─────────────────────────
-  const W = 6880, H = 1440, TW = 1720, TH = 720, M = 110;
+  const W = 6880, H = 1440, TW = 1720, TH = 720, M0 = 110;
+  // Sicherheitsrand: Abstand der Texte zum Bildschirmrand (Tasten Q und A, gespeichert im Browser)
+  let M = M0;
+  try { const m = parseInt(localStorage.getItem('simbox-margin'), 10); if (m >= 0 && m <= 400) M = m; } catch (e) {}
+  // Bei größerem Rand wird der Inhalt im selben Verhältnis kleiner, damit er auf den Bildschirm passt
+  const KS = () => Math.min(1, (TH - 2 * M) / (TH - 2 * M0));
+  const v = n => n * KS();
   const col = c => c * TW;
 
   // ───────────────────────── Inhalte ─────────────────────────
@@ -219,7 +249,7 @@
     const i = document.createElement('i'); i.style.left = col(c) + 'px'; i.style.top = r * TH + 'px'; grid.appendChild(i);
   }
   if (qs.get('grid')) grid.classList.add('on');
-  addEventListener('keydown', e => { if (e.key.toLowerCase() === 'g') grid.classList.toggle('on'); });
+  addEventListener('keydown', e => onKey(e));
 
   // Fortschritt
   const progress = document.getElementById('progress');
@@ -256,7 +286,7 @@
     const mask = document.createElement('div'); mask.className = 'mask';
     const inner = document.createElement('div');
     inner.className = 'inner ' + (o.cls || '');
-    if (o.size) inner.style.fontSize = o.size + 'px';
+    if (o.size) inner.style.fontSize = o.size * KS() + 'px';
     if (o.weight) inner.style.fontWeight = o.weight;
     if (o.style) Object.assign(inner.style, o.style);
 
@@ -383,7 +413,7 @@
     // ── Beat A: Ziffer + Titel ──
     T(scene, { text: String(L.n), x: col(numA), y: 0, w: TW, h: H, align: 'center', valign: 'center', size: 1720, weight: 800,
       cls: 'display acc', style: { lineHeight: .74 }, in: ['rise', A + .1, 1.3], out: ['rise', B - .6, .8] });
-    T(scene, { text: `Level ${L.n}`, x: left ? col(numA) + M : col(numA + 1) - M, y: M - 20, align: left ? 'left' : 'right',
+    T(scene, { text: `Level ${L.n}`, x: left ? col(numA) + M : col(numA + 1) - M, y: M - v(20), align: left ? 'left' : 'right',
       size: 52, cls: 'kicker', in: ['rise', A + .6], out: ['rise', B - .7, .5] });
 
     T(scene, { text: L.de, x: left ? col(cA) + M : col(cA), y: 0, w: wA, h: TH - 80, align: alignA, valign: 'bottom',
@@ -410,35 +440,35 @@
     // Spalte 1: Beschreibung DE (oben) / EN (unten)
     const c1 = col(cC);
     T(scene, { text: `${L.de}`, x: c1 + M, y: M, size: 44, cls: 'kicker acc', in: ['rise', C + .3], out: ['rise', END - .3, .5] });
-    T(scene, { text: L.textDe, x: c1 + M, y: M + 90, w: TW - 2 * M, size: 84, cls: 'para', in: ['fade', C + .5, 1.1], out: ['fade', END - .2, .6] });
+    T(scene, { text: L.textDe, x: c1 + M, y: M + v(90), w: TW - 2 * M, size: 84, cls: 'para', in: ['fade', C + .5, 1.1], out: ['fade', END - .2, .6] });
     T(scene, { text: L.en, x: c1 + M, y: TH + M, size: 44, cls: 'kicker dim', in: ['rise', C + .8], out: ['rise', END - .2, .5] });
-    T(scene, { text: L.textEn, x: c1 + M, y: TH + M + 90, w: TW - 2 * M, size: 84, cls: 'para dim', in: ['fade', C + 1, 1.1], out: ['fade', END - .1, .6] });
+    T(scene, { text: L.textEn, x: c1 + M, y: TH + M + v(90), w: TW - 2 * M, size: 84, cls: 'para dim', in: ['fade', C + 1, 1.1], out: ['fade', END - .1, .6] });
 
     // Spalte 2: Wer fährt? (oben) / Beispiel (unten)
     const c2 = col(cC + 1);
     T(scene, { text: "Wer fährt? · Who's driving?", x: c2 + M, y: M, size: 44, cls: 'kicker acc', in: ['rise', C + 1.4], out: ['rise', END - .2, .5] });
-    T(scene, { text: L.driverDe, x: c2 + M, maxw: TW - 2 * M, y: M + 80, size: 200, weight: 800, cls: 'display', in: ['letters', C + 1.6, .9], out: ['letters', END - .2, .6] });
-    T(scene, { text: L.driverEn, x: c2 + M, maxw: TW - 2 * M, y: M + 270, size: 200, weight: 800, cls: 'display outline', in: ['letters', C + 1.9, .9], out: ['letters', END - .1, .6] });
-    T(scene, { text: L.driverNote, x: c2 + M, maxw: TW - 2 * M, y: TH - M - 44, size: 44, weight: 600, cls: 'kicker dim', in: ['fade', C + 2.4], out: ['fade', END, .5] });
+    T(scene, { text: L.driverDe, x: c2 + M, maxw: TW - 2 * M, y: M + v(80), size: 200, weight: 800, cls: 'display', in: ['letters', C + 1.6, .9], out: ['letters', END - .2, .6] });
+    T(scene, { text: L.driverEn, x: c2 + M, maxw: TW - 2 * M, y: M + v(270), size: 200, weight: 800, cls: 'display outline', in: ['letters', C + 1.9, .9], out: ['letters', END - .1, .6] });
+    T(scene, { text: L.driverNote, x: c2 + M, maxw: TW - 2 * M, y: TH - M - v(44), size: 44, weight: 600, cls: 'kicker dim', in: ['fade', C + 2.4], out: ['fade', END, .5] });
 
     T(scene, { text: 'Beispiel · Example', x: c2 + M, y: TH + M, size: 44, cls: 'kicker acc', in: ['rise', C + 2.6], out: ['rise', END - .1, .5] });
     const exDe = L.exDe.split(' · '), exEn = L.exEn.split(' · ');
-    T(scene, { html: exDe.map(t => `<div>${t}</div>`).join(''), x: c2 + M, maxw: TW - 2 * M, y: TH + M + 90, size: 92, weight: 700, cls: 'display',
+    T(scene, { html: exDe.map(t => `<div>${t}</div>`).join(''), x: c2 + M, maxw: TW - 2 * M, y: TH + M + v(90), size: 92, weight: 700, cls: 'display',
       style: { lineHeight: 1.02 }, in: ['fade', C + 2.8, 1], out: ['fade', END, .5] });
-    T(scene, { html: exEn.map(t => `<div>${t}</div>`).join(''), x: c2 + M, maxw: TW - 2 * M, y: TH + M + 110 + exDe.length * 94, size: 92, weight: 500, cls: 'display dim',
+    T(scene, { html: exEn.map(t => `<div>${t}</div>`).join(''), x: c2 + M, maxw: TW - 2 * M, y: TH + M + v(110) + exDe.length * v(94), size: 92, weight: 500, cls: 'display dim',
       style: { lineHeight: 1.02 }, in: ['fade', C + 3.1, 1], out: ['fade', END, .5] });
 
     // Spalte 3: Füße / Hände / Augen / Kopf – je Bildschirm zwei Zeilen
     const c3 = col(cC + 2);
     BODY.forEach(([de, en], k) => {
       const busy = L.body[k];
-      const y = (k < 2 ? 0 : TH) + M - 10 + (k % 2) * 260;
+      const y = (k < 2 ? 0 : TH) + M - v(10) + (k % 2) * v(260);
       const t0 = C + 3.4 + k * .3;
-      T(scene, { text: de, x: c3 + M, y, maxw: TW - 2 * M - 420, size: 220, weight: 800, cls: 'display' + (busy ? '' : ' outline'),
+      T(scene, { text: de, x: c3 + M, y, maxw: TW - 2 * M - v(420), size: 220, weight: 800, cls: 'display' + (busy ? '' : ' outline'),
         style: busy ? {} : { '--stroke': '3px', opacity: .55 }, in: ['letters', t0, .8], out: ['letters', END - .3 + k * .05, .6], stagger: .04 });
-      T(scene, { text: en, x: c3 + M + 6, y: y + 196, size: 40, cls: 'kicker dim', in: ['fade', t0 + .3], out: ['fade', END, .4] });
+      T(scene, { text: en, x: c3 + M + v(6), y: y + v(196), size: 40, cls: 'kicker dim', in: ['fade', t0 + .3], out: ['fade', END, .4] });
       T(scene, { html: busy ? 'gefordert<br><span class="dim">required</span>' : 'frei<br><span class="dim">free</span>',
-        x: c3 + TW - M, y: y + 40, align: 'right', size: 64, weight: 700, cls: 'display' + (busy ? '' : ' acc'),
+        x: c3 + TW - M, y: y + v(40), align: 'right', size: 64, weight: 700, cls: 'display' + (busy ? '' : ' acc'),
         style: { lineHeight: 1.05, textAlign: 'right' }, in: ['slideR', t0 + .4, .9], out: ['fade', END, .4] });
     });
 
@@ -459,14 +489,83 @@
     if (f >= 0) idx = f;
   }
 
+  let timer = 0, cur = idx, sceneEnd = 0, paused = false, remaining = 0;
   function next() {
-    host.querySelectorAll('.scene').forEach(o => o.remove());
-    const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
-    const q = SEQ[idx];
-    const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
+    cur = idx;
     idx = (idx + 1) % SEQ.length;
-    setTimeout(next, s(dur));
+    host.querySelectorAll('.scene').forEach(o => o.remove());
+    segs.forEach(sg => sg.querySelector('.fill').getAnimations().forEach(a => a.cancel()));
+    stage.style.setProperty('--m', M + 'px');
+    const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
+    const q = SEQ[cur];
+    const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
+    clearTimeout(timer);
+    timer = setTimeout(next, s(dur));
+    sceneEnd = performance.now() + s(dur);
+    if (paused) { paused = false; setPaused(true); }   // springen während der Pause: neue Szene steht still
   }
+  function goTo(k) { idx = (k + SEQ.length) % SEQ.length; next(); }
+
+  function setPaused(on) {
+    if (on === paused) return;
+    paused = on;
+    if (on) {
+      clearTimeout(timer);
+      remaining = Math.max(0, sceneEnd - performance.now());
+      document.getAnimations().forEach(a => a.pause());
+    } else {
+      document.getAnimations().forEach(a => a.play());
+      sceneEnd = performance.now() + remaining;
+      timer = setTimeout(next, remaining);
+    }
+  }
+
+  // ───────────────────────── Tasten & Übersicht ─────────────────────────
+  const help = document.getElementById('help'), toast = document.getElementById('toast');
+  let toastTimer = 0;
+  function say(t) {
+    toast.textContent = t; toast.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('on'), 1800);
+  }
+  function sceneName(q) { return q.kind === 'intro' ? 'Einstieg' : 'Level ' + q.L.n; }
+  function drawHelp() {
+    help.innerHTML = `<h2>Tasten</h2><table>
+      <tr><td>H</td><td>diese Übersicht ein/aus</td></tr>
+      <tr><td>G</td><td>Bildschirmraster und Sicherheitsrand (gestrichelt) ein/aus</td></tr>
+      <tr><td>Q &nbsp;/&nbsp; A</td><td>Sicherheitsrand größer / kleiner – mit Shift in 50er-Schritten</td></tr>
+      <tr><td>0</td><td>Sicherheitsrand zurück auf ${M0} px</td></tr>
+      <tr><td>← &nbsp;/&nbsp; →</td><td>vorige / nächste Szene</td></tr>
+      <tr><td>Leertaste</td><td>Pause / weiter</td></tr>
+      <tr><td>F</td><td>Vollbild ein/aus</td></tr></table>
+      <div class="state">Sicherheitsrand: ${M} px · Szene: ${sceneName(SEQ[cur])}${paused ? ' · pausiert' : ''}</div>`;
+  }
+  function setMargin(m) {
+    M = Math.max(0, Math.min(400, m));
+    try { if (M === M0) localStorage.removeItem('simbox-margin'); else localStorage.setItem('simbox-margin', M); } catch (e) {}
+    say(`Sicherheitsrand ${M} px`);
+    const wasPaused = paused;
+    goTo(cur);                                   // aktuelle Szene mit neuem Rand neu aufbauen
+    if (wasPaused) setPaused(true);
+  }
+  function onKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key, big = e.shiftKey ? 50 : 10;
+    if (k === 'h' || k === 'H' || k === '?') help.classList.toggle('on');
+    else if (k === 'g' || k === 'G') grid.classList.toggle('on');
+    else if (k === 'q' || k === 'Q') setMargin(M + big);
+    else if (k === 'a' || k === 'A') setMargin(M - big);
+    else if (k === '0') setMargin(M0);
+    else if (k === 'ArrowRight') { goTo(cur + 1); say(sceneName(SEQ[cur])); }
+    else if (k === 'ArrowLeft') { goTo(cur - 1); say(sceneName(SEQ[cur])); }
+    else if (k === ' ') { setPaused(!paused); say(paused ? 'Pause' : 'Weiter'); }
+    else if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {});
+    }
+    else return;
+    e.preventDefault();
+    drawHelp();
+  }
+  drawHelp();
 
   const go = () => setTimeout(next, s(OFFSET) * SPEED);
   (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(go, go);

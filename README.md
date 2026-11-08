@@ -21,6 +21,24 @@ Bühne mit. Es braucht keinen Server und keine weiteren Dateien.
 | `?offset=8`  | Start um n Sekunden verzögern, z. B. für die zweite Seite      |
 | `?speed=1.5` | schneller / langsamer abspielen                                |
 
+## Tasten
+
+H blendet die Übersicht ein.
+
+| Taste       | Wirkung                                                                  |
+| ----------- | ------------------------------------------------------------------------ |
+| H           | Tastenübersicht ein/aus                                                  |
+| G           | Bildschirmraster und Sicherheitsrand (gestrichelt) ein/aus               |
+| Q / A       | Sicherheitsrand größer / kleiner, mit Shift in 50er-Schritten            |
+| 0           | Sicherheitsrand zurück auf 110 px                                        |
+| ← / →       | vorige / nächste Szene                                                   |
+| Leertaste   | Pause / weiter                                                           |
+| F           | Vollbild ein/aus                                                         |
+
+Der Sicherheitsrand ist der Abstand der Texte zum Bildschirmrand (Standard 110 px). Wird er größer,
+schrumpft der Inhalt im selben Verhältnis mit, damit alles auf den Bildschirm passt. Der Browser merkt
+sich den eingestellten Wert.
+
 ## Varianten
 
 Zwei eigenständige Dateien, jede für sich vollständig:
