@@ -93,7 +93,7 @@
   /* Text-Element: pos > drift > mask > inner */
   .pos { position: absolute; white-space: nowrap; }
   .pos.box { display: flex; }
-  .mask { display: block; overflow: hidden; padding: .04em .02em .1em; margin: -.04em -.02em -.1em; }
+  .mask { display: block; overflow: hidden; padding: .24em .02em .14em; margin: -.24em -.02em -.14em; }  /* oben Luft für Umlautpunkte */
   .mask.free { overflow: visible; }
   .inner { display: block; will-change: transform, opacity, clip-path; }
   .inner .ch { display: inline-block; will-change: transform; }
@@ -361,18 +361,18 @@
     switch (type) {
       case 'letters':
         chars.forEach((c, i) => {
-          const k = isIn ? [{ transform: 'translateY(135%)' }, { transform: 'translateY(0)' }]
-                         : [{ transform: 'translateY(0)' }, { transform: 'translateY(-135%)' }];
+          const k = isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                         : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }];
           c.animate(k, { ...opt, delay: s(at + i * st) });
         });
         break;
       case 'rise':
-        inner.animate(isIn ? [{ transform: 'translateY(135%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(-135%)' }], opt);
+        inner.animate(isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], opt);
         break;
       case 'drop':
-        inner.animate(isIn ? [{ transform: 'translateY(-135%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(135%)' }], opt);
+        inner.animate(isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
+                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }], opt);
         break;
       case 'wipe': {
         const hid = isIn ? 'inset(0 100% 0 0)' : (align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)');
