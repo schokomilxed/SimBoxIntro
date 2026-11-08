@@ -95,8 +95,8 @@
   .pos.box { display: flex; }
   .mask { display: block; overflow: hidden; padding: .24em .02em .14em; margin: -.24em -.02em -.14em; }  /* oben Luft für Umlautpunkte */
   .mask.free { overflow: visible; }
-  .inner { display: block; will-change: transform, opacity, clip-path; }
-  .inner .ch { display: inline-block; will-change: transform; }
+  .inner { display: block; }   /* bewusst kein will-change: dauerhafte Grafikebenen füllen den Grafikspeicher */
+  .inner .ch { display: inline-block; }
   .inner .sp { display: inline-block; width: .22em; }
 
   .display { font-family: var(--display); line-height: .86; letter-spacing: -.02em; text-transform: uppercase; }
@@ -263,6 +263,35 @@
   const EASE_IN = 'cubic-bezier(.16,.84,.24,1)';
   const EASE_OUT = 'cubic-bezier(.7,0,.84,0)';
 
+  // Animationen entstehen erst kurz vor ihrem Einsatz und werden nach dem Ende wieder aufgelöst
+  // (der Endzustand bleibt als normaler Stil stehen). So hält der Browser nur die Elemente als
+  // Grafikebene, die sich gerade bewegen – sonst kann der Grafikspeicher volllaufen, und es fehlen
+  // einzelne Buchstaben, Texte oder ganze Flächen.
+  const LEAD = 80;                 // ms Vorlauf
+  let T0 = 0, pauseStart = 0;      // Startzeit der laufenden Szene
+  let slots = new Map();           // Einsatzzeit (ms) → Funktionen
+  let slotTimers = [];
+  function anim(el, kf, at, opt, hideBefore) {
+    if (hideBefore) Object.assign(el.style, kf[0]);     // Ausgangszustand als normaler Stil
+    const key = Math.round(at);
+    if (!slots.has(key)) slots.set(key, []);
+    slots.get(key).push(() => {
+      if (!el.isConnected) return;
+      const a = el.animate(kf, { ...opt, delay: T0 + key - performance.now(), fill: 'forwards' });
+      a.finished.then(() => {
+        try { a.commitStyles(); } catch (e) { Object.assign(el.style, kf[kf.length - 1]); }
+        a.cancel();
+      }, () => {});
+    });
+  }
+  function armSlots() {
+    slotTimers.forEach(clearTimeout); slotTimers = [];
+    const now = performance.now();
+    slots.forEach((fns, at) => slotTimers.push(setTimeout(() => { slots.delete(at); fns.forEach(f => f()); },
+      Math.max(0, T0 + at - LEAD - now))));
+  }
+  function clearSlots() { slotTimers.forEach(clearTimeout); slotTimers = []; slots = new Map(); }
+
   /**
    * Legt ein Text-Element an und plant Ein-/Ausblendung.
    * o: { html|text, x, y, w, h, align:'left'|'right'|'center', valign, size, weight, cls, style,
@@ -313,8 +342,8 @@
     if (o.out) play(inner, chars, o.out, false, st, o.align);
     if (o.drift) {
       const [dx, from, to] = o.drift;
-      drift.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }],
-        { delay: s(from), duration: s(to - from), easing: 'linear', fill: 'both' });
+      anim(drift, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }], s(from),
+        { duration: s(to - from), easing: 'linear' }, false);
     }
     // In DIN Pro laufen Zeilen breiter als in der schmalen Ausgangsschrift: zu breite Zeilen verkleinern
     const maxw = o.maxw ?? o.w;
@@ -326,39 +355,37 @@
   }
 
   function play(inner, chars, [type, at, dur = .9], isIn, st, align) {
-    const opt = { delay: s(at), duration: s(dur), easing: isIn ? EASE_IN : EASE_OUT, fill: isIn ? 'both' : 'forwards' };
+    const opt = { duration: s(dur), easing: isIn ? EASE_IN : EASE_OUT };
+    const go = (el, k, t = at) => anim(el, k, s(t), opt, isIn);
     const kf = (a, b) => isIn ? [a, b] : [b, a];
     const shown = { transform: 'none', opacity: 1 };
     switch (type) {
       case 'letters':
-        chars.forEach((c, i) => {
-          const k = isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                         : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }];
-          c.animate(k, { ...opt, delay: s(at + i * st) });
-        });
+        chars.forEach((c, i) => go(c, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                                             : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], at + i * st));
         break;
       case 'rise':
-        inner.animate(isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], opt);
+        go(inner, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }]);
         break;
       case 'drop':
-        inner.animate(isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }], opt);
+        go(inner, isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }]);
         break;
       case 'wipe': {
-        const hid = isIn ? 'inset(0 100% 0 0)' : (align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)');
+        const hid = align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
         const hidIn = align === 'right' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-        inner.animate(kf({ clipPath: isIn ? hidIn : hid }, { clipPath: 'inset(0 0 0 0)' }), opt);
+        go(inner, kf({ clipPath: isIn ? hidIn : hid }, { clipPath: 'inset(0 0 0 0)' }));
         break;
       }
       case 'fade':
-        inner.animate(kf({ opacity: 0, transform: 'translateY(40px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateY(40px)' }, shown)); break;
       case 'slideL':
-        inner.animate(kf({ opacity: 0, transform: 'translateX(-500px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateX(-500px)' }, shown)); break;
       case 'slideR':
-        inner.animate(kf({ opacity: 0, transform: 'translateX(500px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateX(500px)' }, shown)); break;
       case 'scale':
-        inner.animate(kf({ opacity: 0, transform: 'scale(1.35)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'scale(1.35)' }, shown)); break;
     }
   }
 
@@ -366,8 +393,8 @@
     const d = document.createElement('div');
     Object.assign(d.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: '6px', background: color || 'var(--accent)', transformOrigin: '0 0' });
     scene.appendChild(d);
-    d.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { delay: s(inAt), duration: s(1.1), easing: EASE_IN, fill: 'both' });
-    d.animate([{ transform: 'scaleX(1)', transformOrigin: '100% 0' }, { transform: 'scaleX(0)', transformOrigin: '100% 0' }], { delay: s(outAt), duration: s(.7), easing: EASE_OUT, fill: 'forwards' });
+    anim(d, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], s(inAt), { duration: s(1.1), easing: EASE_IN }, true);
+    anim(d, [{ transform: 'scaleX(1)', transformOrigin: '100% 0' }, { transform: 'scaleX(0)', transformOrigin: '100% 0' }], s(outAt), { duration: s(.7), easing: EASE_OUT }, false);
   }
 
   // ───────────────────────── Szenen ─────────────────────────
@@ -496,9 +523,12 @@
     host.querySelectorAll('.scene').forEach(o => o.remove());
     segs.forEach(sg => sg.querySelector('.fill').getAnimations().forEach(a => a.cancel()));
     stage.style.setProperty('--m', M + 'px');
+    clearSlots();
+    T0 = performance.now();
     const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
     const q = SEQ[cur];
     const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
+    armSlots();
     clearTimeout(timer);
     timer = setTimeout(next, s(dur));
     sceneEnd = performance.now() + s(dur);
@@ -511,9 +541,13 @@
     paused = on;
     if (on) {
       clearTimeout(timer);
-      remaining = Math.max(0, sceneEnd - performance.now());
+      slotTimers.forEach(clearTimeout); slotTimers = [];
+      pauseStart = performance.now();
+      remaining = Math.max(0, sceneEnd - pauseStart);
       document.getAnimations().forEach(a => a.pause());
     } else {
+      T0 += performance.now() - pauseStart;      // geplante Einsätze um die Pause verschieben
+      armSlots();
       document.getAnimations().forEach(a => a.play());
       sceneEnd = performance.now() + remaining;
       timer = setTimeout(next, remaining);

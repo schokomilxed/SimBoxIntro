@@ -59,8 +59,8 @@
   .pos.box { display: flex; }
   .mask { display: block; overflow: hidden; padding: .24em .02em .14em; margin: -.24em -.02em -.14em; }  /* oben Luft für Umlautpunkte */
   .mask.free { overflow: visible; }
-  .inner { display: block; will-change: transform, opacity, clip-path; }
-  .inner .ch { display: inline-block; will-change: transform; }
+  .inner { display: block; }   /* bewusst kein will-change: dauerhafte Grafikebenen füllen den Grafikspeicher */
+  .inner .ch { display: inline-block; }
   .inner .sp { display: inline-block; width: .22em; }
 
   .display { font-family: var(--display); line-height: .86; letter-spacing: -.01em; text-transform: uppercase; }
@@ -72,30 +72,13 @@
   .para { white-space: normal; font-family: var(--text); font-weight: 500; line-height: 1.22; letter-spacing: -.005em; }
 
   /* ── Variante „lila“: wabernder Verlauf ── */
-  #wave { position: absolute; inset: 0; display: none; overflow: hidden; }
+  /* Verlauf wird auf ein kleines Canvas gezeichnet und hochskaliert – weich und ohne große Grafikebenen */
+  #wave { position: absolute; left: 0; top: 0; width: 6880px; height: 1440px; display: block; }
   #stage.lila { --bg: #8d63ea; --fg: #ffffff; --dim: rgba(255, 255, 255, .74); --line: rgba(255, 255, 255, .3); --accent: #2e0f66; }
-  #stage.lila #wave { display: block; background: linear-gradient(100deg, #7f57e6 0%, #9d74f0 35%, #8a62ea 60%, #a27cf2 100%); }
   #stage.lila #glow { display: none; }
   #stage.lila .inner { text-shadow: 0 0 60px rgba(60, 20, 140, .18); }
   #stage.lila .outline { text-shadow: none; }
   #stage.lila .outline.acc { -webkit-text-stroke-width: calc(var(--stroke, 4px) * 1.7); }
-  #wave b { position: absolute; border-radius: 50%; will-change: transform; }
-  #wave .b1 { width: 3600px; height: 2600px; left: -900px; top: -900px;
-    background: radial-gradient(closest-side, rgba(196, 160, 250, .9), rgba(196, 160, 250, 0)); animation: w1 34s ease-in-out infinite alternate; }
-  #wave .b2 { width: 3800px; height: 2800px; left: 3600px; top: -600px;
-    background: radial-gradient(closest-side, rgba(108, 82, 236, .85), rgba(108, 82, 236, 0)); animation: w2 41s ease-in-out infinite alternate; }
-  #wave .b3 { width: 3000px; height: 2400px; left: 1600px; top: 200px;
-    background: radial-gradient(closest-side, rgba(222, 170, 245, .7), rgba(222, 170, 245, 0)); animation: w3 29s ease-in-out infinite alternate; }
-  #wave .b4 { width: 3400px; height: 2600px; left: 4600px; top: 300px;
-    background: radial-gradient(closest-side, rgba(160, 130, 248, .8), rgba(160, 130, 248, 0)); animation: w1 37s ease-in-out -12s infinite alternate-reverse; }
-  /* weißer Lichtfleck, wandert pro Level an eine andere Stelle */
-  #wave .light { width: 1700px; height: 1500px; top: -30px; left: calc(var(--gx, 50%) - 850px);
-    background: radial-gradient(closest-side, rgba(255, 255, 255, .5), rgba(255, 255, 255, .14) 45%, rgba(255, 255, 255, 0));
-    transition: left 6s cubic-bezier(.45, 0, .2, 1); animation: wl 13s ease-in-out infinite alternate; }
-  @keyframes w1 { to { transform: translate(1400px, 380px) scale(1.18); } }
-  @keyframes w2 { to { transform: translate(-1700px, 260px) scale(.85); } }
-  @keyframes w3 { 50% { transform: translate(1200px, -300px) scale(1.2); } to { transform: translate(-900px, -120px) scale(.9); } }
-  @keyframes wl { to { transform: translate(160px, 60px) scale(1.12); } }
 
   /* Fortschritt unten */
   #progress { position: absolute; left: 0; right: 0; bottom: max(0px, calc(var(--m, 110px) - 110px)); height: 56px; display: flex; pointer-events: none; }
@@ -133,7 +116,7 @@
 </head>
 <body>
 <div id="stage" class="lila">
-  <div id="wave"><b class="b1"></b><b class="b3"></b><b class="b2"></b><b class="b4"></b><b class="light"></b></div>
+  <canvas id="wave" width="860" height="180"></canvas>
   <div id="glow"></div>
   <div id="scenes"></div>
   <div id="progress"></div>
@@ -256,6 +239,35 @@
   const EASE_IN = 'cubic-bezier(.16,.84,.24,1)';
   const EASE_OUT = 'cubic-bezier(.7,0,.84,0)';
 
+  // Animationen entstehen erst kurz vor ihrem Einsatz und werden nach dem Ende wieder aufgelöst
+  // (der Endzustand bleibt als normaler Stil stehen). So hält der Browser nur die Elemente als
+  // Grafikebene, die sich gerade bewegen – sonst kann der Grafikspeicher volllaufen, und es fehlen
+  // einzelne Buchstaben, Texte oder ganze Flächen.
+  const LEAD = 80;                 // ms Vorlauf
+  let T0 = 0, pauseStart = 0;      // Startzeit der laufenden Szene
+  let slots = new Map();           // Einsatzzeit (ms) → Funktionen
+  let slotTimers = [];
+  function anim(el, kf, at, opt, hideBefore) {
+    if (hideBefore) Object.assign(el.style, kf[0]);     // Ausgangszustand als normaler Stil
+    const key = Math.round(at);
+    if (!slots.has(key)) slots.set(key, []);
+    slots.get(key).push(() => {
+      if (!el.isConnected) return;
+      const a = el.animate(kf, { ...opt, delay: T0 + key - performance.now(), fill: 'forwards' });
+      a.finished.then(() => {
+        try { a.commitStyles(); } catch (e) { Object.assign(el.style, kf[kf.length - 1]); }
+        a.cancel();
+      }, () => {});
+    });
+  }
+  function armSlots() {
+    slotTimers.forEach(clearTimeout); slotTimers = [];
+    const now = performance.now();
+    slots.forEach((fns, at) => slotTimers.push(setTimeout(() => { slots.delete(at); fns.forEach(f => f()); },
+      Math.max(0, T0 + at - LEAD - now))));
+  }
+  function clearSlots() { slotTimers.forEach(clearTimeout); slotTimers = []; slots = new Map(); }
+
   /**
    * Legt ein Text-Element an und plant Ein-/Ausblendung.
    * o: { html|text, x, y, w, h, align:'left'|'right'|'center', valign, size, weight, cls, style,
@@ -306,46 +318,44 @@
     if (o.out) play(inner, chars, o.out, false, st, o.align);
     if (o.drift) {
       const [dx, from, to] = o.drift;
-      drift.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }],
-        { delay: s(from), duration: s(to - from), easing: 'linear', fill: 'both' });
+      anim(drift, [{ transform: 'translateX(0)' }, { transform: `translateX(${dx}px)` }], s(from),
+        { duration: s(to - from), easing: 'linear' }, false);
     }
     return inner;
   }
 
   function play(inner, chars, [type, at, dur = .9], isIn, st, align) {
-    const opt = { delay: s(at), duration: s(dur), easing: isIn ? EASE_IN : EASE_OUT, fill: isIn ? 'both' : 'forwards' };
+    const opt = { duration: s(dur), easing: isIn ? EASE_IN : EASE_OUT };
+    const go = (el, k, t = at) => anim(el, k, s(t), opt, isIn);
     const kf = (a, b) => isIn ? [a, b] : [b, a];
     const shown = { transform: 'none', opacity: 1 };
     switch (type) {
       case 'letters':
-        chars.forEach((c, i) => {
-          const k = isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                         : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }];
-          c.animate(k, { ...opt, delay: s(at + i * st) });
-        });
+        chars.forEach((c, i) => go(c, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                                             : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], at + i * st));
         break;
       case 'rise':
-        inner.animate(isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }], opt);
+        go(inner, isIn ? [{ transform: 'translateY(150%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(-150%)' }]);
         break;
       case 'drop':
-        inner.animate(isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
-                           : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }], opt);
+        go(inner, isIn ? [{ transform: 'translateY(-150%)' }, { transform: 'translateY(0)' }]
+                       : [{ transform: 'translateY(0)' }, { transform: 'translateY(150%)' }]);
         break;
       case 'wipe': {
-        const hid = isIn ? 'inset(0 100% 0 0)' : (align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)');
+        const hid = align === 'right' ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
         const hidIn = align === 'right' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)';
-        inner.animate(kf({ clipPath: isIn ? hidIn : hid }, { clipPath: 'inset(0 0 0 0)' }), opt);
+        go(inner, kf({ clipPath: isIn ? hidIn : hid }, { clipPath: 'inset(0 0 0 0)' }));
         break;
       }
       case 'fade':
-        inner.animate(kf({ opacity: 0, transform: 'translateY(40px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateY(40px)' }, shown)); break;
       case 'slideL':
-        inner.animate(kf({ opacity: 0, transform: 'translateX(-500px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateX(-500px)' }, shown)); break;
       case 'slideR':
-        inner.animate(kf({ opacity: 0, transform: 'translateX(500px)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'translateX(500px)' }, shown)); break;
       case 'scale':
-        inner.animate(kf({ opacity: 0, transform: 'scale(1.35)' }, shown), opt); break;
+        go(inner, kf({ opacity: 0, transform: 'scale(1.35)' }, shown)); break;
     }
   }
 
@@ -353,8 +363,8 @@
     const d = document.createElement('div');
     Object.assign(d.style, { position: 'absolute', left: x + 'px', top: y + 'px', width: w + 'px', height: '6px', background: color || 'var(--accent)', transformOrigin: '0 0' });
     scene.appendChild(d);
-    d.animate([{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], { delay: s(inAt), duration: s(1.1), easing: EASE_IN, fill: 'both' });
-    d.animate([{ transform: 'scaleX(1)', transformOrigin: '100% 0' }, { transform: 'scaleX(0)', transformOrigin: '100% 0' }], { delay: s(outAt), duration: s(.7), easing: EASE_OUT, fill: 'forwards' });
+    anim(d, [{ transform: 'scaleX(0)' }, { transform: 'scaleX(1)' }], s(inAt), { duration: s(1.1), easing: EASE_IN }, true);
+    anim(d, [{ transform: 'scaleX(1)', transformOrigin: '100% 0' }, { transform: 'scaleX(0)', transformOrigin: '100% 0' }], s(outAt), { duration: s(.7), easing: EASE_OUT }, false);
   }
 
   // ───────────────────────── Szenen ─────────────────────────
@@ -462,7 +472,44 @@
     return DUR;
   }
 
+  // ───────────────────────── Wabernder Verlauf ─────────────────────────
+  const wave = document.getElementById('wave'), wx = wave.getContext('2d');
+  const WV_W = wave.width, WV_H = wave.height;
+  // Farbflächen: Position (Anteil von Breite/Höhe), Radius (Anteil der Breite), Farbe, Weg, Periode in s
+  const BLOBS = [
+    { x: .14, y: .1,  r: .32, c: [196, 160, 250], a: .9,  mx: .2,   my: .26,  p: 34 },
+    { x: .82, y: .25, r: .36, c: [108, 82, 236],  a: .85, mx: -.24, my: .18,  p: 41 },
+    { x: .44, y: .75, r: .3,  c: [222, 170, 245], a: .7,  mx: .17,  my: -.2,  p: 29 },
+    { x: .9,  y: .95, r: .32, c: [160, 130, 248], a: .8,  mx: -.2,  my: -.25, p: 37 }
+  ];
+  let lightX = .5, lightTarget = .5;
+  function blob(x, y, rx, ry, col, a, mid) {
+    wx.save(); wx.translate(x, y); wx.scale(1, ry / rx);
+    const rg = wx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    rg.addColorStop(0, `rgba(${col},${a})`);
+    if (mid) rg.addColorStop(.45, `rgba(${col},${mid})`);
+    rg.addColorStop(1, `rgba(${col},0)`);
+    wx.fillStyle = rg; wx.fillRect(-rx, -rx, rx * 2, rx * 2); wx.restore();
+  }
+  function drawWave(now) {
+    const t = now / 1000;
+    const g = wx.createLinearGradient(0, 0, WV_W, WV_H * .4);
+    g.addColorStop(0, '#7f57e6'); g.addColorStop(.35, '#9d74f0'); g.addColorStop(.6, '#8a62ea'); g.addColorStop(1, '#a27cf2');
+    wx.fillStyle = g; wx.fillRect(0, 0, WV_W, WV_H);
+    for (const b of BLOBS) {
+      const k = (1 - Math.cos(t / b.p * Math.PI)) / 2;              // weich hin und her
+      const k2 = (1 - Math.cos(t / (b.p * 1.37) * Math.PI)) / 2;
+      blob((b.x + b.mx * k) * WV_W, (b.y + b.my * k2) * WV_H, b.r * WV_W * (.9 + .25 * k2), b.r * WV_W * .72, b.c.join(','), b.a);
+    }
+    lightX += (lightTarget - lightX) * .008;                         // Lichtfleck gleitet zur neuen Stelle
+    const lk = (1 - Math.cos(t / 13 * Math.PI)) / 2;
+    blob((lightX + .025 * lk) * WV_W, (.5 + .05 * lk) * WV_H, .12 * WV_W * (1 + .12 * lk), .1 * WV_W, '255,255,255', .5, .14);
+    requestAnimationFrame(drawWave);
+  }
+  requestAnimationFrame(drawWave);
+
   function setAccent(c, gx) {
+    lightTarget = gx / 100;
     if (!LILA) stage.style.setProperty('--accent', c);   // lila: feste Akzentfarbe aus dem CSS
     stage.style.setProperty('--gx', gx + '%');
   }
@@ -483,9 +530,12 @@
     host.querySelectorAll('.scene').forEach(o => o.remove());
     segs.forEach(sg => sg.querySelector('.fill').getAnimations().forEach(a => a.cancel()));
     stage.style.setProperty('--m', M + 'px');
+    clearSlots();
+    T0 = performance.now();
     const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
     const q = SEQ[cur];
     const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
+    armSlots();
     clearTimeout(timer);
     timer = setTimeout(next, s(dur));
     sceneEnd = performance.now() + s(dur);
@@ -498,9 +548,13 @@
     paused = on;
     if (on) {
       clearTimeout(timer);
-      remaining = Math.max(0, sceneEnd - performance.now());
+      slotTimers.forEach(clearTimeout); slotTimers = [];
+      pauseStart = performance.now();
+      remaining = Math.max(0, sceneEnd - pauseStart);
       document.getAnimations().forEach(a => a.pause());
     } else {
+      T0 += performance.now() - pauseStart;      // geplante Einsätze um die Pause verschieben
+      armSlots();
       document.getAnimations().forEach(a => a.play());
       sceneEnd = performance.now() + remaining;
       timer = setTimeout(next, remaining);
