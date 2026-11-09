@@ -77,6 +77,3 @@ Sicherheitsrand 110 px.
   cat SimBoxIntro_lila-din_6880x1440_30fps.mp4.part* > SimBoxIntro_lila-din_6880x1440_30fps.mp4
   shasum -a 256 -c SHA256SUMS.txt
   ```
-
-`SimBoxIntro_schwarz_6880x1440_30fps.mp4` ist der ältere Export in Barlow (läuft 2 % zu schnell,
-Umlautpunkte abgeschnitten) und wird durch die DIN-Version ersetzt.
