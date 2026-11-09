@@ -63,3 +63,20 @@ CI-Schrift setzen.
 ## Inhalte anpassen
 
 Titel, Schlagworte, Erklärungen und Beispiele stehen oben im Skript im Array `LEVELS`.
+
+## Filme
+
+Gerendert aus den DIN-Pro-Varianten: H.264, 6880 × 1440, 30 fps, 2:34,6 min, nahtlos loopbar,
+Sicherheitsrand 110 px.
+
+- `SimBoxIntro_schwarz-din_6880x1440_30fps.mp4`
+- `SimBoxIntro_lila-din_6880x1440_30fps.mp4` – liegt wegen der GitHub-Grenze von 100 MB pro Datei in zwei
+  Teilen im Repo (`.part0`, `.part1`, nicht neu komprimiert). Zusammensetzen:
+
+  ```sh
+  cat SimBoxIntro_lila-din_6880x1440_30fps.mp4.part* > SimBoxIntro_lila-din_6880x1440_30fps.mp4
+  shasum -a 256 -c SHA256SUMS.txt
+  ```
+
+`SimBoxIntro_schwarz_6880x1440_30fps.mp4` ist der ältere Export in Barlow (läuft 2 % zu schnell,
+Umlautpunkte abgeschnitten) und wird durch die DIN-Version ersetzt.
