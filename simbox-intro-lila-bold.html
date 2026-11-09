@@ -608,7 +608,7 @@
       a.finished.then(() => a.cancel(), () => {});
     });
   }
-  const DIGIT = t => [14 * t + 3, 1, 14 * t + 11, 11], WALL = [1, 1, 55, 11];
+  const DIGIT = t => [14 * t + 3, 2, 14 * t + 11, 10], WALL = [1, 1, 55, 11];
   function choreo(q) {
     if (q.kind === 'intro') {
       sweep(0); frameTo(WALL, 0);

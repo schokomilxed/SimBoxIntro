@@ -64,6 +64,13 @@ Zwei eigenständige Dateien, jede für sich vollständig:
   weiße Schrift, Akzente in Dunkelviolett. Ein weißer Lichtfleck wandert pro Level die Wand entlang.
   Die Farben stehen im CSS unter `#stage.lila` und `#wave`.
 
+## Eigenständige Dateien zum Verschicken
+
+`standalone/simbox-intro-lila-ci-standalone.html` und `standalone/simbox-intro-lila-bold-standalone.html`
+enthalten DIN Pro eingebettet (je ca. 0,9 MB) und brauchen weder den Ordner `fonts/` noch Internet.
+Die Weitergabe der Schrift muss die DIN-Pro-Lizenz abdecken. Nach Änderungen an den Hauptdateien
+die Standalone-Dateien neu erzeugen.
+
 ## Schrift
 
 Barlow Condensed / Barlow kommen von Google Fonts. Ohne Internet greift eine Systemschrift –
