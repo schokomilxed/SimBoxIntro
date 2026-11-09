@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sim.Box Idle Lila CI</title>
+<!--
+  Sim.Box – Idle-Modus, Variante „Lila CI“: die sechs Stufen des automatisierten Fahrens (SAE J3016), DE/EN,
+  im Gestaltungssystem der übrigen Medienflächen der Ausstellung:
+    – weißes Raster über dem Lila-Verlauf, Inhalte sitzen auf Rasterzellen
+    – Inhaltsfläche mit weißen Eckwinkeln, Karten als halbtransparente Flächen
+    – deutsche Titel DIN Pro Bold, englische Titel DIN Pro Regular, alle Texte weiß, keine Konturschrift
+    – einheitliche Übergänge: Flächen bauen sich Rasterspalte für Rasterspalte auf, Texte blenden weich ein
+  Bühne: 6880 × 1440 px = 4 × 2 Bildschirme à 1720 × 720 px, Raster 14 × 6 Zellen pro Bildschirm.
+
+  Schrift: DIN Pro aus dem Ordner „fonts“ neben dieser Datei oder installiert, ersatzweise Barlow.
+
+  Tasten (H blendet die Übersicht ein):
+    H            Tastenübersicht ein/aus
+    G            Bildschirmstöße einblenden
+    ← / →        vorige / nächste Szene
+    Leertaste    Pause / weiter
+    F            Vollbild ein/aus
+  URL-Parameter (falls nutzbar): ?level=3, ?offset=8, ?speed=1.5
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  /* DIN Pro: installierte Schrift oder Dateien im Ordner fonts/ (Gewicht 600 nutzt Medium, 800/900 Black) */
+  @font-face { font-family: "SimBox DIN"; font-weight: 300; font-display: block;
+    src: local("DIN Pro Light"), local("DINPro-Light"), local("DIN Pro Light"),
+         url("fonts/DINPro-Light.woff2") format("woff2"), url("fonts/DINPro-Light.woff") format("woff"),
+         url("fonts/DINPro-Light.otf") format("opentype"), url("fonts/DINPro-Light.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 400; font-display: block;
+    src: local("DIN Pro"), local("DINPro-Regular"), local("DIN Pro Regular"),
+         url("fonts/DINPro-Regular.woff2") format("woff2"), url("fonts/DINPro-Regular.woff") format("woff"),
+         url("fonts/DINPro-Regular.otf") format("opentype"), url("fonts/DINPro-Regular.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 500; font-display: block;
+    src: local("DIN Pro Medium"), local("DINPro-Medium"), local("DIN Pro Medium"),
+         url("fonts/DINPro-Medium.woff2") format("woff2"), url("fonts/DINPro-Medium.woff") format("woff"),
+         url("fonts/DINPro-Medium.otf") format("opentype"), url("fonts/DINPro-Medium.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 600; font-display: block;
+    src: local("DIN Pro Medium"), local("DINPro-Medium"), local("DIN Pro Medium"),
+         url("fonts/DINPro-Medium.woff2") format("woff2"), url("fonts/DINPro-Medium.woff") format("woff"),
+         url("fonts/DINPro-Medium.otf") format("opentype"), url("fonts/DINPro-Medium.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 700; font-display: block;
+    src: local("DIN Pro Bold"), local("DINPro-Bold"), local("DIN Pro Bold"),
+         url("fonts/DINPro-Bold.woff2") format("woff2"), url("fonts/DINPro-Bold.woff") format("woff"),
+         url("fonts/DINPro-Bold.otf") format("opentype"), url("fonts/DINPro-Bold.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 800; font-display: block;
+    src: local("DIN Pro Black"), local("DINPro-Black"), local("DIN Pro Black"),
+         url("fonts/DINPro-Black.woff2") format("woff2"), url("fonts/DINPro-Black.woff") format("woff"),
+         url("fonts/DINPro-Black.otf") format("opentype"), url("fonts/DINPro-Black.ttf") format("truetype"); }
+  @font-face { font-family: "SimBox DIN"; font-weight: 900; font-display: block;
+    src: local("DIN Pro Black"), local("DINPro-Black"), local("DIN Pro Black"),
+         url("fonts/DINPro-Black.woff2") format("woff2"), url("fonts/DINPro-Black.woff") format("woff"),
+         url("fonts/DINPro-Black.otf") format("opentype"), url("fonts/DINPro-Black.ttf") format("truetype"); }
+  :root { --text: "SimBox DIN", "Barlow", "Helvetica Neue", Arial, sans-serif; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage {
+    position: absolute; left: 0; top: 0; width: 6880px; height: 1440px; overflow: hidden;
+    transform-origin: 0 0; background: #8d63ea; color: #fff; font-family: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  #wave { position: absolute; left: 0; top: 0; width: 6880px; height: 1440px; }
+
+  /* Raster: 14 × 6 Zellen pro Bildschirm, Linien und hellere Kreuzungspunkte */
+  #raster { position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(circle, rgba(255, 255, 255, .9) 0 4px, transparent 5px),
+      linear-gradient(90deg, rgba(255, 255, 255, .32) 0 2px, transparent 2px),
+      linear-gradient(rgba(255, 255, 255, .32) 0 2px, transparent 2px);
+    background-size: calc(1720px / 14) 120px;
+    background-position: calc(1720px / -28 + 1px) -59px, 0 0, 0 0; }
+
+  /* Flächen */
+  .panel { position: absolute; background: rgba(190, 170, 245, .34); }
+  .card  { position: absolute; background: rgba(86, 52, 196, .30); }
+  .chip-free { background: rgba(255, 255, 255, .10); box-shadow: inset 0 0 0 3px #fff; }
+  .br { position: absolute; width: 64px; height: 64px; border: 0 solid #fff; }
+  .br.tl { left: -4px; top: -4px; border-left-width: 8px; border-top-width: 8px; }
+  .br.tr { right: -4px; top: -4px; border-right-width: 8px; border-top-width: 8px; }
+  .br.bl { left: -4px; bottom: -4px; border-left-width: 8px; border-bottom-width: 8px; }
+  .br.brr { right: -4px; bottom: -4px; border-right-width: 8px; border-bottom-width: 8px; }
+
+  /* Texte */
+  .pos { position: absolute; white-space: nowrap; }
+  .pos.box { display: flex; }
+  .inner { display: block; }
+  .bold { font-weight: 700; text-transform: uppercase; line-height: 1.02; letter-spacing: .005em; }
+  .reg  { font-weight: 400; text-transform: uppercase; line-height: 1.02; letter-spacing: .005em; }
+  .kicker { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; line-height: 1.2; }
+  .para { white-space: normal; font-weight: 400; line-height: 1.3; }
+  .soft { opacity: .8; }
+  .vlabel { position: absolute; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .04em; font-size: 56px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; }
+
+  /* Fortschritt (Bildschirm links unten) */
+  #prog { position: absolute; }
+  #prog .line { position: absolute; left: 0; right: 0; top: 0; height: 4px; background: rgba(255, 255, 255, .45); }
+  #prog .node { position: absolute; top: 2px; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+    background: rgba(255, 255, 255, .6); transition: transform .6s, background .6s; }
+  #prog .node.on { background: #fff; transform: scale(1.7); }
+  #prog .num { position: absolute; top: 44px; transform: translateX(-50%); font: 400 44px/1 var(--text); opacity: .7; transition: opacity .6s; }
+  #prog .num.on { font-weight: 700; opacity: 1; }
+
+  /* Bildschirmstöße (Taste G), Übersicht (H), Hinweis */
+  #grid { position: absolute; inset: 0; pointer-events: none; display: none; z-index: 10;
+    background:
+      linear-gradient(90deg, transparent 1716px, #f0f 1716px, #f0f 1724px, transparent 1724px) 0 0 / 1720px 100%,
+      linear-gradient(transparent 716px, #f0f 716px, #f0f 724px, transparent 724px) 0 0 / 100% 1440px; }
+  #grid.on { display: block; }
+  #help { position: absolute; left: 40px; top: 40px; width: 1640px; box-sizing: border-box; z-index: 20; display: none;
+    padding: 36px 48px; background: rgba(0, 0, 0, .86); color: #fff; font: 500 32px/1.36 "Barlow", Arial, sans-serif; }
+  #help.on { display: block; }
+  #help h2 { margin: 0 0 12px; font-size: 42px; font-weight: 700; }
+  #help table { border-collapse: collapse; }
+  #help td { padding: 2px 40px 2px 0; vertical-align: top; }
+  #help td:first-child { font-weight: 700; white-space: nowrap; }
+  #help .state { margin-top: 14px; color: #ffd23f; }
+  #toast { position: absolute; left: 860px; top: 1080px; transform: translate(-50%, -50%); z-index: 21; padding: 20px 40px;
+    background: rgba(0, 0, 0, .86); color: #fff; font: 600 40px/1.2 "Barlow", Arial, sans-serif; opacity: 0; transition: opacity .4s; }
+  #toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="wave" width="860" height="180"></canvas>
+  <div id="raster"></div>
+  <div id="fixed"></div>
+  <div id="scenes"></div>
+  <div id="grid"></div>
+  <div id="help"></div>
+  <div id="toast"></div>
+</div>
+
+<script>
+(() => {
+  // ───────────────────────── Raster ─────────────────────────
+  const PW = 6880, PH = 1440, TW = 1720, TH = 720;
+  const CW = TW / 14, CH = TH / 6;               // Rasterzelle ≈ 123 × 120 px
+  const X = c => c * CW, Y = r => r * CH;         // Spalte 0–56, Zeile 0–12
+
+  // ───────────────────────── Inhalte ─────────────────────────
+  const LEVELS = [
+    {
+      n: 0, color: '#ff5a3c',
+      de: 'Keine Automatisierung', en: 'No Automation',
+      keyEn: 'Hands on', keyDe: 'Hände dran',
+      textDe: 'Der Mensch lenkt, bremst und beschleunigt selbst. Systeme warnen höchstens – etwa beim Verlassen der Spur oder vor dem toten Winkel.',
+      textEn: 'The human steers, brakes and accelerates. Systems may warn at most – for example of lane departure or a car in the blind spot.',
+      driverDe: 'Der Mensch', driverEn: 'The human', driverNote: 'immer · always',
+      exDe: 'Spurverlassenswarnung · Totwinkelwarner', exEn: 'Lane departure warning · Blind spot alert',
+      body: [1, 1, 1, 1]
+    },
+    {
+      n: 1, color: '#ff8a3d',
+      de: 'Assistiertes Fahren', en: 'Driver Assistance',
+      keyEn: 'Feet off', keyDe: 'Füße weg',
+      textDe: 'Ein System übernimmt entweder das Lenken oder das Bremsen und Beschleunigen. Der Mensch fährt und behält alles im Blick.',
+      textEn: 'A system handles either steering or braking and accelerating. The human drives and keeps watching.',
+      driverDe: 'Der Mensch', driverEn: 'The human', driverNote: 'mit Unterstützung · with support',
+      exDe: 'Abstandsregeltempomat · Spurhalteassistent', exEn: 'Adaptive cruise control · Lane keeping assist',
+      body: [0, 1, 1, 1]
+    },
+    {
+      n: 2, color: '#ffc93d',
+      de: 'Teilautomatisierung', en: 'Partial Automation',
+      keyEn: 'Hands off', keyDe: 'Hände weg',
+      textDe: 'Das System lenkt, bremst und beschleunigt gleichzeitig. Der Mensch muss es aber ständig überwachen und jederzeit eingreifen können.',
+      textEn: 'The system steers, brakes and accelerates at the same time. But the human must monitor it constantly and be ready to take over.',
+      driverDe: 'Der Mensch', driverEn: 'The human', driverNote: 'überwacht ständig · monitors constantly',
+      exDe: 'Stauassistent · Autobahnassistent', exEn: 'Traffic jam assist · Highway assist',
+      body: [0, 0, 1, 1]
+    },
+    {
+      n: 3, color: '#b9ef4f',
+      de: 'Bedingte Automatisierung', en: 'Conditional Automation',
+      keyEn: 'Eyes off', keyDe: 'Augen weg',
+      textDe: 'In festgelegten Situationen fährt das Auto selbst. Der Mensch darf sich abwenden, muss aber auf Aufforderung übernehmen.',
+      textEn: 'In defined situations the car drives itself. The human may look away, but must take over when asked to.',
+      driverDe: 'Das System', driverEn: 'The system', driverNote: 'Mensch auf Abruf · human on standby',
+      exDe: 'Staupilot auf der Autobahn', exEn: 'Traffic jam pilot on the motorway',
+      body: [0, 0, 0, 1]
+    },
+    {
+      n: 4, color: '#3fe0c5',
+      de: 'Hochautomatisierung', en: 'High Automation',
+      keyEn: 'Mind off', keyDe: 'Kopf frei',
+      textDe: 'In einem festgelegten Einsatzbereich fährt das Fahrzeug vollständig selbst – auch in Notsituationen. Niemand muss eingreifen.',
+      textEn: 'Within a defined operating area the vehicle drives entirely on its own – even in emergencies. Nobody has to intervene.',
+      driverDe: 'Das System', driverEn: 'The system', driverNote: 'im Einsatzbereich · within its domain',
+      exDe: 'Robotaxi im Stadtgebiet · Fahrerloses Parken', exEn: 'Robotaxi in a city zone · Driverless parking',
+      body: [0, 0, 0, 0]
+    },
+    {
+      n: 5, color: '#3fa9ff',
+      de: 'Vollautomatisierung', en: 'Full Automation',
+      keyEn: 'Driver off', keyDe: 'Ohne Fahrer',
+      textDe: 'Überall, jederzeit, bei jedem Wetter. Lenkrad und Pedale werden überflüssig – alle an Bord sind Passagiere.',
+      textEn: 'Anywhere, anytime, in any weather. Steering wheel and pedals become optional – everyone on board is a passenger.',
+      driverDe: 'Das System', driverEn: 'The system', driverNote: 'überall · everywhere',
+      exDe: 'Vision – noch nicht auf der Straße', exEn: 'Vision – not yet on the road',
+      body: [0, 0, 0, 0]
+    }
+  ];
+  const BODY = [['Füße', 'Feet'], ['Hände', 'Hands'], ['Augen', 'Eyes'], ['Kopf', 'Mind']];
+
+  // ───────────────────────── Parameter ─────────────────────────
+  const qs = new URLSearchParams(location.search);
+  const SPEED = Math.max(.1, parseFloat(qs.get('speed')) || 1);
+  const OFFSET = Math.max(0, parseFloat(qs.get('offset')) || 0);
+  const startParam = qs.get('level');
+  const s = t => t * 1000 / SPEED;
+
+  const stage = document.getElementById('stage');
+  function fit() {
+    const k = Math.min(innerWidth / PW, innerHeight / PH);
+    stage.style.transform = `translate(${(innerWidth - PW * k) / 2}px, ${(innerHeight - PH * k) / 2}px) scale(${k})`;
+  }
+  addEventListener('resize', fit); fit();
+  const grid = document.getElementById('grid');
+  if (qs.get('grid')) grid.classList.add('on');
+
+  // ───────────────────────── Zeitsteuerung ─────────────────────────
+  // Animationen entstehen erst kurz vor ihrem Einsatz und werden danach aufgelöst (Endzustand bleibt
+  // als normaler Stil). So belegen nur bewegte Elemente Grafikspeicher.
+  const LEAD = 80;
+  let T0 = 0, pauseStart = 0, slots = new Map(), slotTimers = [];
+  function anim(el, kf, at, opt, hideBefore) {
+    if (hideBefore) Object.assign(el.style, kf[0]);
+    const key = Math.round(at);
+    if (!slots.has(key)) slots.set(key, []);
+    slots.get(key).push(() => {
+      if (!el.isConnected) return;
+      const a = el.animate(kf, { ...opt, delay: T0 + key - performance.now(), fill: 'forwards' });
+      a.finished.then(() => {
+        try { a.commitStyles(); } catch (e) { Object.assign(el.style, kf[kf.length - 1]); }
+        a.cancel();
+      }, () => {});
+    });
+  }
+  function armSlots() {
+    slotTimers.forEach(clearTimeout); slotTimers = [];
+    const now = performance.now();
+    slots.forEach((fns, at) => slotTimers.push(setTimeout(() => { slots.delete(at); fns.forEach(f => f()); },
+      Math.max(0, T0 + at - LEAD - now))));
+  }
+  function clearSlots() { slotTimers.forEach(clearTimeout); slotTimers = []; slots = new Map(); }
+
+  // ───────────────────────── Bausteine ─────────────────────────
+  // Einheitliche Übergänge: Texte blenden weich von unten ein und nach oben aus,
+  // Flächen bauen sich Rasterspalte für Rasterspalte auf und ab.
+  const EASE = 'cubic-bezier(.22,.8,.3,1)';
+  function textIn(el, at) { anim(el, [{ opacity: 0, transform: 'translateY(36px)' }, { opacity: 1, transform: 'none' }], s(at), { duration: s(.8), easing: EASE }, true); }
+  function textOut(el, at) { anim(el, [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-24px)' }], s(at), { duration: s(.5), easing: 'ease-in' }, false); }
+  function areaIn(el, at, cells) {
+    anim(el, [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)' }], s(at),
+      { duration: s(.06 * cells + .2), easing: `steps(${cells}, end)` }, true);
+  }
+  function areaOut(el, at, cells) {
+    anim(el, [{ clipPath: 'inset(0 0 0 0%)' }, { clipPath: 'inset(0 0 0 100%)' }], s(at),
+      { duration: s(.04 * cells + .2), easing: `steps(${cells}, end)` }, false);
+  }
+
+  /** Text: x, y, w, h (Rasterpixel), align, valign, size, cls, html|text, maxw, in, out */
+  function T(scene, o) {
+    const pos = document.createElement('div');
+    pos.className = 'pos' + (o.w || o.h ? ' box' : '');
+    Object.assign(pos.style, { left: o.x + 'px', top: o.y + 'px' });
+    if (o.w) pos.style.width = o.w + 'px';
+    if (o.h) pos.style.height = o.h + 'px';
+    if (o.w || o.h) {
+      pos.style.justifyContent = { left: 'flex-start', right: 'flex-end', center: 'center' }[o.align || 'left'];
+      pos.style.alignItems = { top: 'flex-start', bottom: 'flex-end', center: 'center' }[o.valign || 'top'];
+      pos.style.textAlign = o.align || 'left';
+    } else if (o.align === 'right') pos.style.transform = 'translateX(-100%)';
+    const inner = document.createElement('div');
+    inner.className = 'inner ' + (o.cls || '');
+    if (o.size) inner.style.fontSize = o.size + 'px';
+    if (o.style) Object.assign(inner.style, o.style);
+    if (o.html != null) inner.innerHTML = o.html; else inner.textContent = o.text;
+    pos.appendChild(inner); scene.appendChild(pos);
+    const maxw = o.maxw ?? o.w;                       // zu breite Zeilen ins Feld einpassen
+    if (maxw && inner.scrollWidth > maxw) inner.style.fontSize = (parseFloat(getComputedStyle(inner).fontSize) * maxw / inner.scrollWidth * .98) + 'px';
+    if (o.in != null) textIn(inner, o.in);
+    if (o.out != null) textOut(inner, o.out);
+    return inner;
+  }
+  /** Fläche auf Rasterzellen: c0, r0, c1, r1; cls 'card' | 'card chip-free' | 'panel'; brackets */
+  function area(parent, { c0, r0, c1, r1, cls = 'card', brackets = false, inAt, outAt }) {
+    const d = document.createElement('div');
+    d.className = cls;
+    Object.assign(d.style, { left: X(c0) + 'px', top: Y(r0) + 'px', width: X(c1 - c0) + 'px', height: Y(r1 - r0) + 'px' });
+    if (brackets) for (const k of ['tl', 'tr', 'bl', 'brr']) { const b = document.createElement('i'); b.className = 'br ' + k; d.appendChild(b); }
+    parent.appendChild(d);
+    const cells = Math.max(1, Math.round(c1 - c0));
+    if (inAt != null) areaIn(d, inAt, cells);
+    if (outAt != null) areaOut(d, outAt, cells);
+    return d;
+  }
+
+  // ───────────────────────── Feste Elemente ─────────────────────────
+  // Bildschirm links: senkrechter Stationstitel, Ziffernfeld, Fortschritt.
+  // Bildschirme 2–4: eine große Inhaltsfläche mit weißen Eckwinkeln über beide Reihen.
+  const fixed = document.getElementById('fixed');
+  area(fixed, { c0: 1.5, r0: 1, c1: 13, r1: 5, cls: 'panel', brackets: true });          // Ziffernfeld
+  area(fixed, { c0: 15, r0: 1, c1: 55, r1: 11, cls: 'panel', brackets: true });          // Inhaltsfläche
+  for (const [txt, r] of [['Autonomes Fahren', 0], ['Autonomous Driving', 6]]) {
+    const v = document.createElement('div'); v.className = 'vlabel'; v.textContent = txt;
+    Object.assign(v.style, { left: X(0) + 'px', top: Y(r) + 'px', width: X(1.5) + 'px', height: Y(6) + 'px' });
+    fixed.appendChild(v);
+  }
+  const prog = document.createElement('div'); prog.id = 'prog';
+  Object.assign(prog.style, { left: X(2.5) + 'px', top: Y(7.5) + 'px', width: X(10) + 'px' });
+  prog.innerHTML = '<div class="line"></div>' + LEVELS.map((L, i) =>
+    `<div class="node" style="left:${i * 20}%"></div><div class="num" style="left:${i * 20}%">${L.n}</div>`).join('');
+  fixed.appendChild(prog);
+  // Raster nur außerhalb der Flächen zeigen (wie auf den übrigen Medienflächen): Flächen ausstanzen
+  {
+    const rect = (x, y, w, h) => `M${x} ${y}H${x + w}V${y + h}H${x}Z`;
+    const holes = [[1.5, 1, 13, 5], [15, 1, 55, 11]].map(([c0, r0, c1, r1]) => rect(X(c0), Y(r0), X(c1 - c0), Y(r1 - r0))).join('');
+    document.getElementById('raster').style.clipPath = `path(evenodd, '${rect(0, 0, PW, PH)}${holes}')`;
+  }
+  const nodes = [...prog.querySelectorAll('.node')], nums = [...prog.querySelectorAll('.num')];
+  function setProgress(n) { nodes.forEach((d, i) => d.classList.toggle('on', i === n)); nums.forEach((d, i) => d.classList.toggle('on', i === n)); }
+
+  // Inhaltsfläche: Innenbereich Spalte 16–54, obere Reihe Zeile 1–5, untere Reihe Zeile 7–11
+  const IX = X(16), IW = X(38);
+
+  // ───────────────────────── Szenen ─────────────────────────
+  function intro(scene) {
+    setAccent(50); setProgress(-1);
+    // Frage
+    T(scene, { text: 'Wer fährt?', x: IX, y: Y(1), w: IW, h: Y(4), valign: 'center', size: 330, cls: 'bold', in: .3, out: 5.6 });
+    T(scene, { text: "Who's driving?", x: IX, y: Y(7), w: IW, h: Y(4), valign: 'center', size: 330, cls: 'reg', in: .6, out: 5.7 });
+    // Sechs Stufen
+    T(scene, { text: '0–5', x: X(1.5), y: Y(1.4), w: X(11.5), h: Y(3.6), align: 'center', valign: 'center', size: 380, cls: 'bold', in: 6.2, out: 12.7 });
+    T(scene, { text: 'SAE J3016', x: IX, y: Y(1.3), size: 44, cls: 'kicker', in: 6.3, out: 12.5 });
+    T(scene, { text: 'Sechs Stufen', x: IX, y: Y(1.9), w: IW, size: 280, cls: 'bold', in: 6.4, out: 12.5 });
+    T(scene, { text: 'des automatisierten Fahrens', x: IX, y: Y(4.3), w: IW, size: 110, cls: 'bold', in: 6.6, out: 12.6 });
+    T(scene, { text: 'Six levels', x: IX, y: Y(7.3), w: IW, size: 280, cls: 'reg', in: 6.8, out: 12.6 });
+    T(scene, { text: 'of driving automation', x: IX, y: Y(9.7), w: IW, size: 110, cls: 'reg', in: 7, out: 12.7 });
+    return 13.6;
+  }
+
+  function levelScene(scene, L, i) {
+    setAccent(i % 2 ? 80 : 20); setProgress(L.n);
+    const A = 0, B = 6.4, C = 12.4, END = 22.6, DUR = END + .9;
+
+    // Ziffernfeld und Levelname (stehen die ganze Szene)
+    T(scene, { text: 'Level', x: X(2.2), y: Y(1.35), size: 44, cls: 'kicker', in: A + .1, out: END });
+    T(scene, { text: String(L.n), x: X(1.5), y: Y(1.4), w: X(11.5), h: Y(3.6), align: 'center', valign: 'center', size: 460, cls: 'bold', in: A + .2, out: END });
+    T(scene, { text: L.de, x: X(2.2), y: Y(9.15), maxw: X(10.6), size: 46, cls: 'bold', in: A + .3, out: END });
+    T(scene, { text: L.en, x: X(2.2), y: Y(9.7), maxw: X(10.6), size: 46, cls: 'reg', in: A + .4, out: END });
+
+    // Takt A: Titel – Deutsch Bold oben, Englisch Regular unten
+    T(scene, { text: L.de, x: IX, y: Y(1), w: IW, h: Y(4), valign: 'center', size: 300, cls: 'bold', in: A + .5, out: B - .8 });
+    T(scene, { text: L.en, x: IX, y: Y(7), w: IW, h: Y(4), valign: 'center', size: 300, cls: 'reg', in: A + .8, out: B - .7 });
+
+    // Takt B: Schlagwort
+    T(scene, { text: L.keyEn, x: IX, y: Y(1), w: IW, h: Y(4), align: 'center', valign: 'center', size: 440, cls: 'bold', in: B, out: C - .8 });
+    T(scene, { text: L.keyDe, x: IX, y: Y(7), w: IW, h: Y(4), align: 'center', valign: 'center', size: 440, cls: 'reg', in: B + .3, out: C - .7 });
+
+    // Takt C: Karten auf dem Raster, je Bildschirm eine Spalte
+    const tc = t => 14 * t + 1;                       // erste Rasterspalte der Karten auf Bildschirm t
+    const PAD = 56, KW = X(12) - 2 * PAD;            // Innenabstand und Textbreite einer Karte
+    const kx = t => X(tc(t)) + PAD;
+    const cardsAt = [C, C + .25, C + .5];
+    // Bildschirm 2: Bedeutung DE / EN
+    area(scene, { c0: tc(1), r0: 1, c1: tc(1) + 12, r1: 5, inAt: cardsAt[0], outAt: END });
+    area(scene, { c0: tc(1), r0: 7, c1: tc(1) + 12, r1: 11, inAt: cardsAt[0] + .1, outAt: END });
+    T(scene, { text: L.de, x: kx(1), y: Y(1) + PAD - 6, maxw: KW, size: 44, cls: 'kicker', in: C + .7, out: END - .3 });
+    T(scene, { text: L.textDe, x: kx(1), y: Y(1) + PAD + 64, w: KW, size: 62, cls: 'para', in: C + .85, out: END - .3 });
+    T(scene, { text: L.en, x: kx(1), y: Y(7) + PAD - 6, maxw: KW, size: 44, cls: 'kicker', in: C + 1, out: END - .3 });
+    T(scene, { text: L.textEn, x: kx(1), y: Y(7) + PAD + 64, w: KW, size: 62, cls: 'para soft', in: C + 1.15, out: END - .3 });
+    // Bildschirm 3: Wer fährt? / Beispiel
+    area(scene, { c0: tc(2), r0: 1, c1: tc(2) + 12, r1: 5, inAt: cardsAt[1], outAt: END });
+    area(scene, { c0: tc(2), r0: 7, c1: tc(2) + 12, r1: 11, inAt: cardsAt[1] + .1, outAt: END });
+    T(scene, { text: "Wer fährt? · Who's driving?", x: kx(2), y: Y(1) + PAD - 6, maxw: KW, size: 44, cls: 'kicker', in: C + 1.3, out: END - .3 });
+    T(scene, { text: L.driverDe, x: kx(2), y: Y(1) + PAD + 70, maxw: KW, size: 120, cls: 'bold', in: C + 1.45, out: END - .3 });
+    T(scene, { text: L.driverEn, x: kx(2), y: Y(1) + PAD + 200, maxw: KW, size: 120, cls: 'reg', in: C + 1.6, out: END - .3 });
+    T(scene, { text: L.driverNote, x: kx(2), y: Y(5) - PAD - 40, maxw: KW, size: 40, cls: 'reg soft', in: C + 1.75, out: END - .3 });
+    const exDe = L.exDe.split(' · '), exEn = L.exEn.split(' · ');
+    T(scene, { text: 'Beispiel · Example', x: kx(2), y: Y(7) + PAD - 6, maxw: KW, size: 44, cls: 'kicker', in: C + 1.9, out: END - .3 });
+    T(scene, { html: exDe.map(t => `<div>${t}</div>`).join(''), x: kx(2), y: Y(7) + PAD + 70, maxw: KW, size: 68, cls: 'bold', in: C + 2.05, out: END - .3 });
+    T(scene, { html: exEn.map(t => `<div>${t}</div>`).join(''), x: kx(2), y: Y(7) + PAD + 90 + exDe.length * 70, maxw: KW, size: 68, cls: 'reg', in: C + 2.2, out: END - .3 });
+    // Bildschirm 4: Füße / Hände / Augen / Kopf – gefordert (gefüllt) oder frei (weißer Rahmen)
+    BODY.forEach(([de, en], k) => {
+      const busy = L.body[k];
+      const r0 = (k < 2 ? 1 : 7) + (k % 2) * 2.1, r1 = r0 + 1.8;
+      const at = cardsAt[2] + k * .15;
+      area(scene, { c0: tc(3), r0, c1: tc(3) + 12, r1, cls: busy ? 'card' : 'card chip-free', inAt: at, outAt: END });
+      const y = Y(r0), h = Y(1.8);
+      T(scene, { html: `${de} <span class="reg" style="font-size:.5em; margin-left:.4em">${en}</span>`, x: kx(3), y, h, valign: 'center', size: 96, cls: 'bold', in: at + .6, out: END - .3 });
+      T(scene, { html: busy ? 'Gefordert<br><span class="reg">Required</span>' : 'Frei<br><span class="reg">Free</span>',
+        x: kx(3), y, w: KW, h, align: 'right', valign: 'center', size: 50, cls: 'bold', style: { lineHeight: 1.1 }, in: at + .75, out: END - .3 });
+    });
+    return DUR;
+  }
+
+  // ───────────────────────── Wabernder Verlauf ─────────────────────────
+  const wave = document.getElementById('wave'), wx = wave.getContext('2d');
+  const WV_W = wave.width, WV_H = wave.height;
+  const LOOP = 154.6;   // alle Bewegungen wiederholen sich genau einmal pro Durchlauf
+  const BLOBS = [
+    { x: .14, y: .1,  r: .32, c: [196, 160, 250], a: .9,  mx: .2,   my: .26,  kx: 2, ky: 1, ph: 0 },
+    { x: .82, y: .25, r: .36, c: [108, 82, 236],  a: .85, mx: -.24, my: .18,  kx: 2, ky: 1, ph: .35 },
+    { x: .44, y: .75, r: .3,  c: [222, 170, 245], a: .7,  mx: .17,  my: -.2,  kx: 3, ky: 2, ph: .6 },
+    { x: .9,  y: .95, r: .32, c: [160, 130, 248], a: .8,  mx: -.2,  my: -.25, kx: 2, ky: 1, ph: .15 }
+  ];
+  const wav = (t, k, ph) => (1 - Math.cos(2 * Math.PI * (t * k / LOOP + ph))) / 2;
+  let lightX = .8, lightTarget = .5, lastT = null;
+  function blob(x, y, rx, ry, col, a, mid) {
+    wx.save(); wx.translate(x, y); wx.scale(1, ry / rx);
+    const rg = wx.createRadialGradient(0, 0, 0, 0, 0, rx);
+    rg.addColorStop(0, `rgba(${col},${a})`);
+    if (mid) rg.addColorStop(.45, `rgba(${col},${mid})`);
+    rg.addColorStop(1, `rgba(${col},0)`);
+    wx.fillStyle = rg; wx.fillRect(-rx, -rx, rx * 2, rx * 2); wx.restore();
+  }
+  function drawWave(now) {
+    const t = now / 1000;
+    const dt = lastT === null ? 0 : Math.max(0, t - lastT); lastT = t;
+    const g = wx.createLinearGradient(0, 0, WV_W, WV_H * .4);
+    g.addColorStop(0, '#7f57e6'); g.addColorStop(.35, '#9d74f0'); g.addColorStop(.6, '#8a62ea'); g.addColorStop(1, '#a27cf2');
+    wx.fillStyle = g; wx.fillRect(0, 0, WV_W, WV_H);
+    for (const b of BLOBS) {
+      const k = wav(t, b.kx, b.ph), k2 = wav(t, b.ky, b.ph + .25);
+      blob((b.x + b.mx * k) * WV_W, (b.y + b.my * k2) * WV_H, b.r * WV_W * (.9 + .25 * k2), b.r * WV_W * .72, b.c.join(','), b.a);
+    }
+    lightX += (lightTarget - lightX) * (1 - Math.exp(-dt / 2));
+    const lk = wav(t, 6, 0);
+    blob((lightX + .025 * lk) * WV_W, (.5 + .05 * lk) * WV_H, .12 * WV_W * (1 + .12 * lk), .1 * WV_W, '255,255,255', .5, .14);
+    requestAnimationFrame(drawWave);
+  }
+  drawWave(performance.now());
+  function setAccent(gx) { lightTarget = gx / 100; }
+
+  // ───────────────────────── Ablauf ─────────────────────────
+  const host = document.getElementById('scenes');
+  const SEQ = [{ kind: 'intro' }, ...LEVELS.map((L, i) => ({ kind: 'level', L, i }))];
+  let idx = 0;
+  if (startParam != null) { const f = SEQ.findIndex(q => q.kind === 'level' && String(q.L.n) === startParam); if (f >= 0) idx = f; }
+  let timer = 0, cur = idx, sceneEnd = 0, paused = false, remaining = 0;
+  function next() {
+    cur = idx; idx = (idx + 1) % SEQ.length;
+    host.querySelectorAll('.scene').forEach(o => o.remove());
+    clearSlots(); T0 = performance.now();
+    const scene = document.createElement('div'); scene.className = 'scene'; host.appendChild(scene);
+    const q = SEQ[cur];
+    const dur = q.kind === 'intro' ? intro(scene) : levelScene(scene, q.L, q.i);
+    armSlots();
+    clearTimeout(timer); timer = setTimeout(next, s(dur)); sceneEnd = performance.now() + s(dur);
+    if (paused) { paused = false; setPaused(true); }
+    drawHelp();
+  }
+  function goTo(k) { idx = (k + SEQ.length) % SEQ.length; next(); }
+  function setPaused(on) {
+    if (on === paused) return;
+    paused = on;
+    if (on) {
+      clearTimeout(timer); slotTimers.forEach(clearTimeout); slotTimers = [];
+      pauseStart = performance.now(); remaining = Math.max(0, sceneEnd - pauseStart);
+      document.getAnimations().forEach(a => a.pause());
+    } else {
+      T0 += performance.now() - pauseStart; armSlots();
+      document.getAnimations().forEach(a => a.play());
+      sceneEnd = performance.now() + remaining; timer = setTimeout(next, remaining);
+    }
+  }
+
+  // ───────────────────────── Tasten & Übersicht ─────────────────────────
+  const help = document.getElementById('help'), toast = document.getElementById('toast');
+  let toastTimer = 0;
+  function say(t) { toast.textContent = t; toast.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('on'), 1800); }
+  const sceneName = q => q.kind === 'intro' ? 'Einstieg' : 'Level ' + q.L.n;
+  function drawHelp() {
+    help.innerHTML = `<h2>Tasten</h2><table>
+      <tr><td>H</td><td>diese Übersicht ein/aus</td></tr>
+      <tr><td>G</td><td>Bildschirmstöße einblenden</td></tr>
+      <tr><td>← &nbsp;/&nbsp; →</td><td>vorige / nächste Szene</td></tr>
+      <tr><td>Leertaste</td><td>Pause / weiter</td></tr>
+      <tr><td>F</td><td>Vollbild ein/aus</td></tr></table>
+      <div class="state">Szene: ${sceneName(SEQ[cur])}${paused ? ' · pausiert' : ''}</div>`;
+  }
+  addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const k = e.key;
+    if (k === 'h' || k === 'H' || k === '?') help.classList.toggle('on');
+    else if (k === 'g' || k === 'G') grid.classList.toggle('on');
+    else if (k === 'ArrowRight') { goTo(cur + 1); say(sceneName(SEQ[cur])); }
+    else if (k === 'ArrowLeft') { goTo(cur - 1); say(sceneName(SEQ[cur])); }
+    else if (k === ' ') { setPaused(!paused); say(paused ? 'Pause' : 'Weiter'); }
+    else if (k === 'f' || k === 'F') { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); }
+    else return;
+    e.preventDefault(); drawHelp();
+  });
+
+  // Start, sobald die Schriften geladen sind (sonst stimmen die Breiten fürs Einpassen nicht)
+  const go = () => setTimeout(next, s(OFFSET) * SPEED);
+  const fontsReady = document.fonts
+    ? Promise.all([400, 700].map(w => document.fonts.load(`${w} 100px "SimBox DIN"`))).then(() => document.fonts.ready)
+    : Promise.resolve();
+  fontsReady.then(go, go);
+})();
+</script>
+</body>
+</html>
