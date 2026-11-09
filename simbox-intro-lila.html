@@ -477,14 +477,19 @@
   // ───────────────────────── Wabernder Verlauf ─────────────────────────
   const wave = document.getElementById('wave'), wx = wave.getContext('2d');
   const WV_W = wave.width, WV_H = wave.height;
-  // Farbflächen: Position (Anteil von Breite/Höhe), Radius (Anteil der Breite), Farbe, Weg, Periode in s
+  // Alle Bewegungen wiederholen sich genau einmal pro Durchlauf (154,6 s), damit ein
+  // gerenderter Film nahtlos loopt. kx/ky = Anzahl der Hin-und-her-Bewegungen pro Durchlauf.
+  const LOOP = 154.6;
+  // Farbflächen: Position (Anteil von Breite/Höhe), Radius (Anteil der Breite), Farbe, Weg, Zyklen, Phase
   const BLOBS = [
-    { x: .14, y: .1,  r: .32, c: [196, 160, 250], a: .9,  mx: .2,   my: .26,  p: 34 },
-    { x: .82, y: .25, r: .36, c: [108, 82, 236],  a: .85, mx: -.24, my: .18,  p: 41 },
-    { x: .44, y: .75, r: .3,  c: [222, 170, 245], a: .7,  mx: .17,  my: -.2,  p: 29 },
-    { x: .9,  y: .95, r: .32, c: [160, 130, 248], a: .8,  mx: -.2,  my: -.25, p: 37 }
+    { x: .14, y: .1,  r: .32, c: [196, 160, 250], a: .9,  mx: .2,   my: .26,  kx: 2, ky: 1, ph: 0 },
+    { x: .82, y: .25, r: .36, c: [108, 82, 236],  a: .85, mx: -.24, my: .18,  kx: 2, ky: 1, ph: .35 },
+    { x: .44, y: .75, r: .3,  c: [222, 170, 245], a: .7,  mx: .17,  my: -.2,  kx: 3, ky: 2, ph: .6 },
+    { x: .9,  y: .95, r: .32, c: [160, 130, 248], a: .8,  mx: -.2,  my: -.25, kx: 2, ky: 1, ph: .15 }
   ];
-  let lightX = .5, lightTarget = .5;
+  const wav = (t, k, ph) => (1 - Math.cos(2 * Math.PI * (t * k / LOOP + ph))) / 2;   // 0 → 1 → 0
+  // Lichtfleck startet dort, wo er am Ende eines Durchlaufs steht (Level 5), und gleitet dann weiter
+  let lightX = .8, lightTarget = .5, lastT = null;
   function blob(x, y, rx, ry, col, a, mid) {
     wx.save(); wx.translate(x, y); wx.scale(1, ry / rx);
     const rg = wx.createRadialGradient(0, 0, 0, 0, 0, rx);
@@ -495,20 +500,21 @@
   }
   function drawWave(now) {
     const t = now / 1000;
+    const dt = lastT === null ? 0 : Math.max(0, t - lastT); lastT = t;
     const g = wx.createLinearGradient(0, 0, WV_W, WV_H * .4);
     g.addColorStop(0, '#7f57e6'); g.addColorStop(.35, '#9d74f0'); g.addColorStop(.6, '#8a62ea'); g.addColorStop(1, '#a27cf2');
     wx.fillStyle = g; wx.fillRect(0, 0, WV_W, WV_H);
     for (const b of BLOBS) {
-      const k = (1 - Math.cos(t / b.p * Math.PI)) / 2;              // weich hin und her
-      const k2 = (1 - Math.cos(t / (b.p * 1.37) * Math.PI)) / 2;
+      const k = wav(t, b.kx, b.ph);                                 // weich hin und her
+      const k2 = wav(t, b.ky, b.ph + .25);
       blob((b.x + b.mx * k) * WV_W, (b.y + b.my * k2) * WV_H, b.r * WV_W * (.9 + .25 * k2), b.r * WV_W * .72, b.c.join(','), b.a);
     }
-    lightX += (lightTarget - lightX) * .008;                         // Lichtfleck gleitet zur neuen Stelle
-    const lk = (1 - Math.cos(t / 13 * Math.PI)) / 2;
+    lightX += (lightTarget - lightX) * (1 - Math.exp(-dt / 2));      // Lichtfleck gleitet zur neuen Stelle
+    const lk = wav(t, 6, 0);
     blob((lightX + .025 * lk) * WV_W, (.5 + .05 * lk) * WV_H, .12 * WV_W * (1 + .12 * lk), .1 * WV_W, '255,255,255', .5, .14);
     requestAnimationFrame(drawWave);
   }
-  requestAnimationFrame(drawWave);
+  drawWave(performance.now());                                       // sofort zeichnen, nicht erst im nächsten Bild
 
   function setAccent(c, gx) {
     lightTarget = gx / 100;
