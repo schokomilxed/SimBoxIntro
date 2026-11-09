@@ -306,11 +306,11 @@
   // Bildschirm links: senkrechter Stationstitel, Ziffernfeld, Fortschritt.
   // Bildschirme 2–4: eine große Inhaltsfläche mit weißen Eckwinkeln über beide Reihen.
   const fixed = document.getElementById('fixed');
-  area(fixed, { c0: 1.5, r0: 1, c1: 13, r1: 5, cls: 'panel', brackets: true });          // Ziffernfeld
+  area(fixed, { c0: 2, r0: 1, c1: 13, r1: 5, cls: 'panel', brackets: true });          // Ziffernfeld
   area(fixed, { c0: 15, r0: 1, c1: 55, r1: 11, cls: 'panel', brackets: true });          // Inhaltsfläche
   for (const [txt, r] of [['Autonomes Fahren', 0], ['Autonomous Driving', 6]]) {
     const v = document.createElement('div'); v.className = 'vlabel'; v.textContent = txt;
-    Object.assign(v.style, { left: X(0) + 'px', top: Y(r) + 'px', width: X(1.5) + 'px', height: Y(6) + 'px' });
+    Object.assign(v.style, { left: X(0) + 'px', top: Y(r) + 'px', width: X(2) + 'px', height: Y(6) + 'px' });
     fixed.appendChild(v);
   }
   const prog = document.createElement('div'); prog.id = 'prog';
@@ -321,7 +321,7 @@
   // Raster nur außerhalb der Flächen zeigen (wie auf den übrigen Medienflächen): Flächen ausstanzen
   {
     const rect = (x, y, w, h) => `M${x} ${y}H${x + w}V${y + h}H${x}Z`;
-    const holes = [[1.5, 1, 13, 5], [15, 1, 55, 11]].map(([c0, r0, c1, r1]) => rect(X(c0), Y(r0), X(c1 - c0), Y(r1 - r0))).join('');
+    const holes = [[2, 1, 13, 5], [15, 1, 55, 11]].map(([c0, r0, c1, r1]) => rect(X(c0), Y(r0), X(c1 - c0), Y(r1 - r0))).join('');
     document.getElementById('raster').style.clipPath = `path(evenodd, '${rect(0, 0, PW, PH)}${holes}')`;
   }
   const nodes = [...prog.querySelectorAll('.node')], nums = [...prog.querySelectorAll('.num')];
@@ -337,7 +337,7 @@
     T(scene, { text: 'Wer fährt?', x: IX, y: Y(1), w: IW, h: Y(4), valign: 'center', size: 330, cls: 'bold', in: .3, out: 5.6 });
     T(scene, { text: "Who's driving?", x: IX, y: Y(7), w: IW, h: Y(4), valign: 'center', size: 330, cls: 'reg', in: .6, out: 5.7 });
     // Sechs Stufen
-    T(scene, { text: '0–5', x: X(1.5), y: Y(1.4), w: X(11.5), h: Y(3.6), align: 'center', valign: 'center', size: 380, cls: 'bold', in: 6.2, out: 12.7 });
+    T(scene, { text: '0–5', x: X(2), y: Y(1.4), w: X(11), h: Y(3.6), align: 'center', valign: 'center', size: 380, cls: 'bold', in: 6.2, out: 12.7 });
     T(scene, { text: 'SAE J3016', x: IX, y: Y(1.3), size: 44, cls: 'kicker', in: 6.3, out: 12.5 });
     T(scene, { text: 'Sechs Stufen', x: IX, y: Y(1.9), w: IW, size: 280, cls: 'bold', in: 6.4, out: 12.5 });
     T(scene, { text: 'des automatisierten Fahrens', x: IX, y: Y(4.3), w: IW, size: 110, cls: 'bold', in: 6.6, out: 12.6 });
@@ -351,10 +351,10 @@
     const A = 0, B = 6.4, C = 12.4, END = 22.6, DUR = END + .9;
 
     // Ziffernfeld und Levelname (stehen die ganze Szene)
-    T(scene, { text: 'Level', x: X(2.2), y: Y(1.35), size: 44, cls: 'kicker', in: A + .1, out: END });
-    T(scene, { text: String(L.n), x: X(1.5), y: Y(1.4), w: X(11.5), h: Y(3.6), align: 'center', valign: 'center', size: 460, cls: 'bold', in: A + .2, out: END });
-    T(scene, { text: L.de, x: X(2.2), y: Y(9.15), maxw: X(10.6), size: 46, cls: 'bold', in: A + .3, out: END });
-    T(scene, { text: L.en, x: X(2.2), y: Y(9.7), maxw: X(10.6), size: 46, cls: 'reg', in: A + .4, out: END });
+    T(scene, { text: 'Level', x: X(2.7), y: Y(1.35), size: 44, cls: 'kicker', in: A + .1, out: END });
+    T(scene, { text: String(L.n), x: X(2), y: Y(1.4), w: X(11), h: Y(3.6), align: 'center', valign: 'center', size: 460, cls: 'bold', in: A + .2, out: END });
+    T(scene, { text: L.de, x: X(2.7), y: Y(9.15), maxw: X(10), size: 46, cls: 'bold', in: A + .3, out: END });
+    T(scene, { text: L.en, x: X(2.7), y: Y(9.7), maxw: X(10), size: 46, cls: 'reg', in: A + .4, out: END });
 
     // Takt A: Titel – Deutsch Bold oben, Englisch Regular unten
     T(scene, { text: L.de, x: IX, y: Y(1), w: IW, h: Y(4), valign: 'center', size: 300, cls: 'bold', in: A + .5, out: B - .8 });

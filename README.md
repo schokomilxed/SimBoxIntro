@@ -50,6 +50,10 @@ Zwei eigenständige Dateien, jede für sich vollständig:
   `-Bold`, `-Black` als .woff2/.woff/.otf/.ttf). Fehlt beides, erscheint ersatzweise Barlow.
   Zeilen, die in DIN Pro zu breit werden, setzt die Seite automatisch kleiner.
 - **Lila in DIN Pro** – `simbox-intro-lila-din.html`: die Lila-Variante in DIN Pro, Schrift wie oben.
+- **Lila Bold** – `simbox-intro-lila-bold.html`: Animation, Größen und Takte wie Lila DIN, die CI dient als
+  Inspiration: weißes Raster im Hintergrund, Klammerecken, die über die Wand wandern und auf Rasterlinien
+  einrasten (Ziffer → ganze Wand → Ziffer), ein helles Rasterband als Übergang zwischen den Takten,
+  deutsche Titel Bold, englische Titel Regular, alles in Weiß, keine Konturschrift.
 - **Lila CI** – `simbox-intro-lila-ci.html`: Versuch im Gestaltungssystem der übrigen Medienflächen.
   Weißes Raster (Zellen auf allen Bildschirmen gleich), Flächen mit weißen Eckwinkeln, deutsche Titel
   DIN Pro Bold, englische Titel DIN Pro Regular, alle Texte weiß, keine Konturschrift. Einheitliche
