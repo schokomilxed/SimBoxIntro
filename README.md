@@ -54,6 +54,9 @@ Zwei eigenständige Dateien, jede für sich vollständig:
   Inspiration: weißes Raster im Hintergrund, Klammerecken, die über die Wand wandern und auf Rasterlinien
   einrasten (Ziffer → ganze Wand → Ziffer), ein helles Rasterband als Übergang zwischen den Takten,
   deutsche Titel Bold, englische Titel Regular, alles in Weiß, keine Konturschrift.
+- **Lila Bold 2** – `simbox-intro-lila-bold2.html`: Lila Bold nach Feedback – Hintergrund blauer mit rosa
+  Rändern, Raster gröber (10 × 4 Zellen pro Bildschirm) und zurückhaltender, kein Rahmen um die ganze Wand;
+  abgedunkelter Rahmen mit Klammerecken (Raster darin ausgespart) nur um die Ziffern.
 - **Lila CI** – `simbox-intro-lila-ci.html`: Versuch im Gestaltungssystem der übrigen Medienflächen.
   Weißes Raster (Zellen auf allen Bildschirmen gleich), Flächen mit weißen Eckwinkeln, deutsche Titel
   DIN Pro Bold, englische Titel DIN Pro Regular, alle Texte weiß, keine Konturschrift. Einheitliche
@@ -66,7 +69,7 @@ Zwei eigenständige Dateien, jede für sich vollständig:
 
 ## Eigenständige Dateien zum Verschicken
 
-`standalone/simbox-intro-lila-ci-standalone.html` und `standalone/simbox-intro-lila-bold-standalone.html`
+`standalone/simbox-intro-lila-ci-standalone.html`, `…-lila-bold-standalone.html` und `…-lila-bold2-standalone.html`
 enthalten DIN Pro eingebettet (je ca. 0,9 MB) und brauchen weder den Ordner `fonts/` noch Internet.
 Die Weitergabe der Schrift muss die DIN-Pro-Lizenz abdecken. Nach Änderungen an den Hauptdateien
 die Standalone-Dateien neu erzeugen.
