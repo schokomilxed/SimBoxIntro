@@ -612,14 +612,15 @@
   }
   // Raster im Rahmen aussparen, solange er sichtbar ist
   let lastClip = '';
-  (function syncHole() {
+  function holeOnce() {
     const op = parseFloat(getComputedStyle(frame).opacity);
     const clip = op > .3
       ? `path(evenodd, 'M0 0H${W}V${H}H0Z M${frame.offsetLeft} ${frame.offsetTop}h${frame.offsetWidth}v${frame.offsetHeight}h${-frame.offsetWidth}Z')`
       : 'none';
     if (clip !== lastClip) { raster.style.clipPath = clip; lastClip = clip; }
-    requestAnimationFrame(syncHole);
-  })();
+  }
+  window.__syncHole = holeOnce;                    // für den Film-Export: vor jedem Bild aufrufen
+  (function syncHole() { holeOnce(); requestAnimationFrame(syncHole); })();
   function sweep(at) {
     slot(at, delay => {
       const a = sweepEl.animate([{ transform: `translateX(${-GX(3)}px)` }, { transform: `translateX(${GX(40)}px)` }],
