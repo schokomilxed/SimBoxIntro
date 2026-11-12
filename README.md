@@ -90,5 +90,6 @@ Gerendert aus den DIN-Pro-Varianten: H.264, 6880 × 1440, 30 fps, 2:34,6 min, na
 Sicherheitsrand 110 px.
 
 - `SimBoxIntro_schwarz-din_6880x1440_30fps.mp4` – im Repo.
+- `SimBoxIntro_lila-bold2_6880x1440_30fps.mp4` – im Repo (99 MB, knapp unter der GitHub-Grenze).
 - `SimBoxIntro_lila-din_6880x1440_30fps.mp4` – mit 136 MB zu groß für GitHub (Grenze 100 MB pro Datei),
   liegt deshalb nur lokal und steht in der `.gitignore`.
